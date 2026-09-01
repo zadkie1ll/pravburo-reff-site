@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}Предпросмотр страниц · Правбюро{% endblock %}
+{% block content %}
+<section class="hero">
+  <p class="eyebrow">UI preview</p>
+  <h1>Все страницы</h1>
+  <p>Страницы используют фиктивные данные и не обращаются к PostgreSQL или Bitrix.</p>
+</section>
+<section class="preview-grid">
+  {% for page in pages %}
+  <a class="card preview-link" href="{{ page.url }}">
+    <span>{{ "%02d"|format(loop.index) }}</span>
+    <strong>{{ page.title }}</strong>
+    <small>{{ page.description }}</small>
+  </a>
+  {% endfor %}
+</section>
+{% endblock %}

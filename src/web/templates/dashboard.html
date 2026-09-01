@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Личный кабинет · Правбюро{% endblock %}
+{% block content %}
+  <section class="hero">
+    <p class="eyebrow">Личный кабинет</p>
+    <h1>Здравствуйте, {{ client.name }}{% if client.middlename %} {{ client.middlename }}{% endif %}</h1>
+    <p>Это первая версия новой платформы. Данные профиля получены из действующего личного кабинета.</p>
+  </section>
+
+  <div class="dashboard-grid">
+    <section class="card profile-card">
+      <div class="card-heading">
+        <div class="avatar" aria-hidden="true">{{ client.name[:1] }}{{ client.surname[:1] }}</div>
+        <div>
+          <p class="label">Профиль клиента</p>
+          <h2>{{ client.full_name }}</h2>
+        </div>
+      </div>
+      <dl class="details">
+        <div><dt>Клиент</dt><dd>№ {{ client.id }}</dd></div>
+        <div><dt>Email</dt><dd>{{ client.email or "Не указан" }}</dd></div>
+        <div><dt>Дата регистрации</dt><dd>{{ client.registered_at.strftime("%d.%m.%Y") }}</dd></div>
+        {% if client.stage_id %}<div><dt>Текущий этап</dt><dd>№ {{ client.stage_id }}</dd></div>{% endif %}
+      </dl>
+    </section>
+
+    <section class="card referral-card">
+      <div class="icon-wrap" aria-hidden="true">↗</div>
+      <p class="label">Скоро</p>
+      <h2>Реферальная программа</h2>
+      <p>В следующем этапе здесь появятся инструменты агентской программы.</p>
+      <span class="coming-soon">Функционал готовится</span>
+    </section>
+  </div>
+{% endblock %}
+

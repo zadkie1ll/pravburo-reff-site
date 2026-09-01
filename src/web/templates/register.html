@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Регистрация · Правбюро{% endblock %}
+{% block content %}<section class="auth-card card"><p class="eyebrow">Агентская программа</p><h1>Регистрация</h1>
+{% if error %}<div class="alert">{{ error }}</div>{% endif %}
+{% if yandex_enabled %}<p><a class="button secondary" href="/auth/yandex/start">Регистрация через Яндекс</a></p>{% endif %}
+{% if telegram_bot_username %}<script async src="https://telegram.org/js/telegram-widget.js?22" data-telegram-login="{{ telegram_bot_username }}" data-size="large" data-auth-url="{{ telegram_auth_url }}" data-request-access="write"></script>{% endif %}
+<form method="post"><input type="hidden" name="csrf" value="{{ csrf_token }}">
+<label>Почта<input type="email" name="email" required autocomplete="email"></label>
+<label>Пароль<input type="password" name="password" minlength="6" required></label>
+<label>Повторите пароль<input type="password" name="password_repeat" minlength="6" required></label>
+<button class="button" type="submit">Получить код</button></form><p><a href="/login">Уже есть аккаунт</a></p></section>{% endblock %}

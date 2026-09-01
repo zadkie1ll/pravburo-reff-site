@@ -1,0 +1,36 @@
+[project]
+name = "pravburo-reff-site"
+version = "0.1.0"
+description = "Public agent site for Pravburo Referral"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.116,<1",
+    "httpx>=0.28,<1",
+    "itsdangerous>=2.2,<3",
+    "jinja2>=3.1,<4",
+    "pillow>=11,<13",
+    "pravburo-reff-common",
+    "pydantic-settings>=2.10,<3",
+    "python-multipart>=0.0.20,<1",
+    "qrcode>=8.2,<9",
+    "uvicorn[standard]>=0.35,<1",
+]
+
+[tool.uv.sources]
+pravburo-reff-common = { path = "common", editable = true }
+
+[dependency-groups]
+dev = ["pytest>=8.4,<9", "pytest-asyncio>=1.0,<2", "ruff>=0.12,<1"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC"]

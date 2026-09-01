@@ -1,0 +1,11 @@
+name: pravburo-reff-site
+
+services:
+  pravburo-reff-site:
+    build: .
+    env_file: .env
+    ports:
+      - "127.0.0.1:${SITE_PORT:-8040}:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
