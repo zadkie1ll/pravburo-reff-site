@@ -7,6 +7,7 @@ from fastapi.templating import Jinja2Templates
 
 from src.api.dependencies import LegacyGatewayDependency
 from src.core.config import Settings, get_settings
+from src.web.dependencies import CurrentAdmin
 
 router = APIRouter(tags=["web"])
 templates = Jinja2Templates(directory=Path(__file__).parents[1] / "templates")
@@ -28,6 +29,7 @@ async def development_client_dashboard(
     client_id: int,
     gateway: LegacyGatewayDependency,
     settings: SettingsDependency,
+    _admin: CurrentAdmin,
 ) -> HTMLResponse:
     if not settings.development_routes_enabled:
         return templates.TemplateResponse(

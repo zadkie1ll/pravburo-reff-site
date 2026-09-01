@@ -1,3 +1,6 @@
+from fastapi.testclient import TestClient
+
+from src.api.dependencies import get_legacy_client_gateway
 from src.core.config import Settings, get_settings
 from src.main import app
 
@@ -8,6 +11,18 @@ def test_dashboard_renders_existing_client(client) -> None:
     assert response.status_code == 200
     assert "Иванов Иван Иванович" in response.text
     assert "ivan@example.com" in response.text
+
+
+def test_dashboard_requires_admin(fake_gateway) -> None:
+    app.dependency_overrides[get_legacy_client_gateway] = lambda: fake_gateway
+    try:
+        with TestClient(app) as anonymous_client:
+            response = anonymous_client.get("/dev/clients/123", follow_redirects=False)
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/login"
 
 
 def test_dashboard_returns_html_404(client) -> None:
