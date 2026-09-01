@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% block title %}Профиль · Правбюро{% endblock %}
+{% block content %}<section class="hero"><p class="eyebrow">Профиль</p><h1>Личные данные</h1></section>
+<div class="dashboard-grid"><section class="card"><h2>Основное</h2>
+{% if info %}<div class="notice-success">{{ info }}</div>{% endif %}{% if error %}<div class="alert">{{ error }}</div>{% endif %}
+<dl class="details">
+<div><dt>Телефон</dt><dd>{{ agent.phone_normalized or 'Не указан' }}</dd></div>
+<div><dt>Email</dt><dd>{{ agent.email or 'Не указан' }}</dd></div>
+<div><dt>Формат сотрудничества</dt><dd>{{ employment_formats.get(agent.employment_format, 'Не указан') }}</dd></div>
+<div><dt>Реквизиты для выплат</dt><dd>{{ agent.payout_details or 'Не указаны' }}</dd></div>
+<div><dt>ИНН</dt><dd>{{ agent.inn or 'Не указан' }}</dd></div>
+<div><dt>Дата регистрации</dt><dd>{{ agent.created_at.strftime("%d.%m.%Y") }}</dd></div>
+<div><dt>Статус аккаунта</dt><dd>{{ 'Активен' if agent.is_active else 'Приостановлен' }}</dd></div>
+</dl></section>
+<section class="card"><h2>Изменить данные</h2>
+<form class="lead-form" method="post" action="/profile"><input type="hidden" name="csrf" value="{{ csrf_token }}">
+<label>ФИО<input name="display_name" maxlength="200" value="{{ agent.display_name }}" required></label>
+<label>Формат сотрудничества<select name="employment_format" required>{% for value, label in employment_formats.items() %}<option value="{{ value.value }}" {% if agent.employment_format == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+<label>Реквизиты для выплат<input name="payout_details" maxlength="200" value="{{ agent.payout_details or '' }}" placeholder="Номер карты или расчётный счёт"></label>
+<label>ИНН<input name="inn" maxlength="12" value="{{ agent.inn or '' }}" placeholder="10 или 12 цифр, для самозанятых и ИП"></label>
+<button class="button" type="submit">Сохранить</button></form></section></div>
+<p class="back-link"><a href="/cabinet">← Вернуться в кабинет</a></p>{% endblock %}

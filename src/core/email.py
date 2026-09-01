@@ -48,3 +48,14 @@ async def send_referral_accepted_notice(email: str, applicant_name: str) -> None
         f"Заявка на консультацию от {applicant_name} по вашей рекомендации принята, "
         "мы уже связываемся с ним.",
     )
+
+
+async def send_admin_profile_change_notice(
+    admin_emails: list[str], agent_label: str, changed_fields: list[str]
+) -> None:
+    body = (
+        f"Партнёр {agent_label} изменил в профиле: {', '.join(changed_fields)}.\n"
+        "Проверьте данные перед следующей выплатой."
+    )
+    for email in admin_emails:
+        await _send_email(email, "Партнёр изменил реквизиты", body)
