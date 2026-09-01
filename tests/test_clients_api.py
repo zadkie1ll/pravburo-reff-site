@@ -1,7 +1,23 @@
 from datetime import UTC, datetime
 
+from fastapi.testclient import TestClient
+
+from src.api.dependencies import get_legacy_client_gateway
 from src.api.v1.schemas import LegacyClientResponse
 from src.integrations.legacy_lk.gateway import LegacyClientRecord
+from src.main import app
+
+
+def test_get_client_requires_admin(fake_gateway) -> None:
+    app.dependency_overrides[get_legacy_client_gateway] = lambda: fake_gateway
+    try:
+        with TestClient(app) as anonymous_client:
+            response = anonymous_client.get("/api/v1/legacy-clients/123", follow_redirects=False)
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 303
+    assert response.headers["location"] == "/login"
 
 
 def test_get_existing_client(client) -> None:

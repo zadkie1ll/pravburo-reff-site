@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, status
 
 from src.api.dependencies import LegacyGatewayDependency
 from src.api.v1.schemas import LegacyClientResponse
+from src.web.dependencies import CurrentAdmin
 
 router = APIRouter(prefix="/api/v1", tags=["legacy clients"])
 
@@ -10,6 +11,7 @@ router = APIRouter(prefix="/api/v1", tags=["legacy clients"])
 async def get_legacy_client(
     client_id: int,
     gateway: LegacyGatewayDependency,
+    _admin: CurrentAdmin,
 ) -> LegacyClientResponse:
     client = await gateway.get_by_id(client_id)
     if client is None:

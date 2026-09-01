@@ -14,9 +14,14 @@ os.environ.setdefault(
 )
 os.environ.setdefault("APP_ENV", "test")
 
+from pravburo_ref_common.models import Agent, AgentRole  # noqa: E402
+
 from src.api.dependencies import get_legacy_client_gateway  # noqa: E402
 from src.integrations.legacy_lk.gateway import LegacyClientRecord  # noqa: E402
 from src.main import app  # noqa: E402
+from src.web.dependencies import require_admin  # noqa: E402
+
+FAKE_ADMIN = Agent(id=1, email="admin@example.com", role=AgentRole.ADMIN)
 
 
 class FakeLegacyClientGateway:
@@ -45,6 +50,7 @@ def fake_gateway() -> FakeLegacyClientGateway:
 @pytest.fixture
 def client(fake_gateway: FakeLegacyClientGateway) -> TestClient:
     app.dependency_overrides[get_legacy_client_gateway] = lambda: fake_gateway
+    app.dependency_overrides[require_admin] = lambda: FAKE_ADMIN
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
