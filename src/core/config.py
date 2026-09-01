@@ -61,6 +61,8 @@ class Settings(BaseSettings):
         if self.ui_preview_enabled and not self.ui_preview_token:
             raise ValueError("UI_PREVIEW_TOKEN is required when UI preview is enabled")
         if self.app_env == "production":
+            if self.app_debug:
+                raise ValueError("APP_DEBUG must be false in production")
             if self.session_secret == "development-only-change-me":
                 raise ValueError("SESSION_SECRET must be configured in production")
             if self.internal_service_token == "development-internal-token":
