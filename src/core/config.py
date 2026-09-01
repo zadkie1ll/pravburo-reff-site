@@ -48,6 +48,8 @@ class Settings(BaseSettings):
     telegram_bot_username: str = ""
     telegram_bot_token: str = ""
     telegram_login_max_age_seconds: int = 86400
+    telegram_manager_url: str = "https://t.me/pravburo_manager"
+    telegram_materials_url: str = "https://t.me/pravburo_materials"
     yandex_client_id: str = ""
     yandex_client_secret: str = ""
     yandex_redirect_uri: str = "http://localhost:8000/auth/yandex/callback"

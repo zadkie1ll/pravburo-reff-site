@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, Response
 
 from src.core.config import get_settings
+from src.web.routes.faq import FAQ_ITEMS
 from src.web.routes.pages import templates
 
 router = APIRouter(prefix="/preview", tags=["UI preview"])
@@ -125,6 +126,7 @@ async def preview_index(request: Request, token: PreviewToken) -> HTMLResponse:
         ("Кабинет агента", "Ссылка, QR, клиенты и начисления", f"/preview/page/cabinet?{query}"),
         ("Реферальная форма", "Публичная форма по UUID-ссылке", referral_url),
         ("Заявка принята", "Успешная отправка формы", f"/preview/page/success?{query}"),
+        ("FAQ", "Как это работает и частые вопросы", f"/preview/page/faq?{query}"),
         ("Legacy-клиент", "Профиль из старого ЛК", f"/preview/page/client?{query}"),
         ("404", "Страница отсутствующего клиента", f"/preview/page/not-found?{query}"),
     ]
@@ -197,6 +199,14 @@ async def preview_page(request: Request, page: str, token: PreviewToken) -> HTML
             },
         ),
         "success": ("referral_success.html", {}),
+        "faq": (
+            "faq.html",
+            {
+                "faq_items": FAQ_ITEMS,
+                "telegram_manager_url": get_settings().telegram_manager_url,
+                "telegram_materials_url": get_settings().telegram_materials_url,
+            },
+        ),
         "client": ("dashboard.html", {"client": data["client"]}),
         "not-found": ("not_found.html", {}),
     }
