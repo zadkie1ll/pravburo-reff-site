@@ -55,6 +55,7 @@ async def cabinet(request: Request, agent: CurrentAgent, session: Session) -> HT
             "agent": agent,
             "rows": rows,
             "referral_url": f"{settings.public_base_url}/r/{agent.referral_code}",
+            "bounty_admin_url": settings.bounty_admin_url,
             "csrf_token": csrf_token(request.session),
         },
     )

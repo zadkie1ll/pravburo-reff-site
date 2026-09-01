@@ -125,7 +125,6 @@ async def preview_index(request: Request, token: PreviewToken) -> HTMLResponse:
         ("Кабинет агента", "Ссылка, QR, клиенты и начисления", f"/preview/page/cabinet?{query}"),
         ("Реферальная форма", "Публичная форма по UUID-ссылке", referral_url),
         ("Заявка принята", "Успешная отправка формы", f"/preview/page/success?{query}"),
-        ("Администратор", "Проверка начислений", f"/preview/page/admin?{query}"),
         ("Legacy-клиент", "Профиль из старого ЛК", f"/preview/page/client?{query}"),
         ("404", "Страница отсутствующего клиента", f"/preview/page/not-found?{query}"),
     ]
@@ -194,27 +193,10 @@ async def preview_page(request: Request, page: str, token: PreviewToken) -> HTML
                 "rows": rows,
                 "referral_url": data["referral_url"],
                 "qr_url": data["qr_url"],
+                "bounty_admin_url": get_settings().bounty_admin_url,
             },
         ),
         "success": ("referral_success.html", {}),
-        "admin": (
-            "admin_rewards.html",
-            {
-                "admin": data["agent"],
-                "rows": [
-                    {
-                        "reward": data["reward_one"],
-                        "application": data["application_one"],
-                        "phone": "+79991234567",
-                    },
-                    {
-                        "reward": data["reward_two"],
-                        "application": data["application_two"],
-                        "phone": "+79876542109",
-                    },
-                ],
-            },
-        ),
         "client": ("dashboard.html", {"client": data["client"]}),
         "not-found": ("not_found.html", {}),
     }

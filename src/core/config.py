@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     session_secret: str = "development-only-change-me"
     legacy_webhook_secret: str = ""
     crm_service_url: str = "http://127.0.0.1:8042"
+    bounty_admin_url: str = "http://127.0.0.1:8041/admin/rewards"
     internal_service_token: str = "development-internal-token"
     turnstile_site_key: str = ""
     turnstile_secret_key: str = ""
