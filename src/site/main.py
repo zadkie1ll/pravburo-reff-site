@@ -13,6 +13,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from src.api.v1.routes import router as api_v1_router
 from src.core.config import get_settings
 from src.core.logging import configure_logging
+from src.core.security_headers import SecurityHeadersMiddleware
 from src.integrations.legacy_lk.database import close_legacy_database
 from src.site.legacy_routes import router as legacy_router
 from src.web.routes.auth import router as auth_router
@@ -34,7 +35,15 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     await close_legacy_database()
 
 
-app = FastAPI(title="pravburo-ref-site", debug=settings.app_debug, lifespan=lifespan)
+app = FastAPI(
+    title="pravburo-ref-site",
+    debug=settings.app_debug,
+    lifespan=lifespan,
+    docs_url=None if settings.app_env == "production" else "/docs",
+    redoc_url=None if settings.app_env == "production" else "/redoc",
+    openapi_url=None if settings.app_env == "production" else "/openapi.json",
+)
+app.add_middleware(SecurityHeadersMiddleware, settings=settings)
 app.add_middleware(
     SessionMiddleware,
     secret_key=settings.session_secret,

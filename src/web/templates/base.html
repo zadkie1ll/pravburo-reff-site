@@ -23,15 +23,6 @@
     </header>
     <main class="page-shell">{% block content %}{% endblock %}</main>
     <footer>Правбюро · Новый личный кабинет</footer>
-    {% if preview_mode %}
-    <script>
-      document.querySelectorAll("form").forEach(function (form) {
-        form.addEventListener("submit", function (event) {
-          event.preventDefault();
-          window.alert("Это предпросмотр верстки. Данные не отправляются.");
-        });
-      });
-    </script>
-    {% endif %}
+    <script src="{{ url_for('static', path='/app.js') }}" defer></script>
   </body>
 </html>
