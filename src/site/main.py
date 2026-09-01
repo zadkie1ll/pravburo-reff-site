@@ -49,6 +49,7 @@ app.add_middleware(
     secret_key=settings.session_secret,
     same_site="lax",
     https_only=settings.app_env == "production",
+    max_age=settings.session_max_age_seconds,
 )
 app.mount(
     "/static",

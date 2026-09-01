@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     legacy_db_schema: str = Field(default="public", pattern=r"^[A-Za-z_][A-Za-z0-9_]*$")
     public_base_url: str = "http://localhost:8000"
     session_secret: str = "development-only-change-me"
+    session_max_age_seconds: int = 30 * 24 * 60 * 60
     legacy_webhook_secret: str = ""
     crm_service_url: str = "http://127.0.0.1:8042"
     bounty_admin_url: str = "http://127.0.0.1:8041/admin/rewards"
