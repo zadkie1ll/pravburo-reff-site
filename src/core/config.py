@@ -30,6 +30,8 @@ class Settings(BaseSettings):
     turnstile_secret_key: str = ""
     submission_rate_limit: int = 10
     submission_rate_window_seconds: int = 60
+    login_rate_limit: int = 5
+    login_rate_window_seconds: int = 300
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_username: str = ""

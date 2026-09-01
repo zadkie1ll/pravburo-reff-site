@@ -22,6 +22,7 @@ from src.core.security import (
     valid_email,
     verify_telegram_login,
 )
+from src.services.protection import login_rate_limiter
 from src.services.social_auth import fetch_yandex_profile, login_social_agent, yandex_authorize_url
 from src.web.routes.pages import templates
 
@@ -60,6 +61,20 @@ async def login(
             name="login.html",
             context=context(request, error="Обновите страницу"),
             status_code=400,
+        )
+    settings = get_settings()
+    remote_ip = request.client.host if request.client else "unknown"
+    allowed = await login_rate_limiter.allow(
+        remote_ip,
+        limit=settings.login_rate_limit,
+        window_seconds=settings.login_rate_window_seconds,
+    )
+    if not allowed:
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context=context(request, error="Слишком много попыток входа. Попробуйте позже."),
+            status_code=429,
         )
     agent = await authenticate(session, email, password)
     if agent is None:

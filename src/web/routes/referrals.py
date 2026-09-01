@@ -102,8 +102,13 @@ async def submit_referral(
         return templates.TemplateResponse(
             request=request, name="not_found.html", context={}, status_code=404
         )
+    settings = get_settings()
     remote_ip = request.client.host if request.client else "unknown"
-    allowed = await rate_limiter.allow(remote_ip)
+    allowed = await rate_limiter.allow(
+        remote_ip,
+        limit=settings.submission_rate_limit,
+        window_seconds=settings.submission_rate_window_seconds,
+    )
     captcha_ok = await verify_turnstile(turnstile_token, remote_ip)
     if website or not allowed or not captcha_ok:
         return templates.TemplateResponse(

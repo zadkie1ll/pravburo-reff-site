@@ -12,21 +12,24 @@ class InMemoryRateLimiter:
         self._hits: dict[str, deque[float]] = defaultdict(deque)
         self._lock = asyncio.Lock()
 
-    async def allow(self, key: str) -> bool:
-        settings = get_settings()
+    async def allow(self, key: str, *, limit: int, window_seconds: int) -> bool:
         now = time.monotonic()
-        boundary = now - settings.submission_rate_window_seconds
+        boundary = now - window_seconds
         async with self._lock:
             hits = self._hits[key]
             while hits and hits[0] < boundary:
                 hits.popleft()
-            if len(hits) >= settings.submission_rate_limit:
+            if len(hits) >= limit:
                 return False
             hits.append(now)
             return True
 
+    def reset(self) -> None:
+        self._hits.clear()
+
 
 rate_limiter = InMemoryRateLimiter()
+login_rate_limiter = InMemoryRateLimiter()
 
 
 async def verify_turnstile(token: str, remote_ip: str) -> bool:
