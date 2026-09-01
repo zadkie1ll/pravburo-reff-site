@@ -1,3 +1,4 @@
+import logging
 from io import BytesIO
 from typing import Annotated
 from uuid import UUID
@@ -11,6 +12,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config import get_settings
+from src.core.email import send_referral_accepted_notice
 from src.core.security import csrf_token, masked_phone
 from src.services.protection import rate_limiter, verify_turnstile
 from src.services.referrals import ApplicationInput, create_first_application
@@ -18,6 +20,7 @@ from src.site.crm_client import CRMClient
 from src.web.dependencies import CurrentAgent
 from src.web.routes.pages import templates
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["referrals"])
 Session = Annotated[AsyncSession, Depends(get_session)]
 
@@ -134,7 +137,7 @@ async def submit_referral(
             status_code=400,
         )
     try:
-        await create_first_application(
+        application, created = await create_first_application(
             session,
             agent,
             ApplicationInput(
@@ -158,6 +161,11 @@ async def submit_referral(
             },
             status_code=400,
         )
+    if created and agent.email:
+        try:
+            await send_referral_accepted_notice(agent.email, application.full_name)
+        except Exception:
+            logger.warning("Failed to notify agent about accepted referral: agent_id=%s", agent.id)
     return RedirectResponse(f"/r/{referral_code}/success", status_code=303)
 
 

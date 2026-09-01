@@ -8,21 +8,19 @@ from src.core.config import get_settings
 logger = logging.getLogger(__name__)
 
 
-async def send_code(email: str, code: str, purpose: str) -> None:
+async def _send_email(to: str, subject: str, body: str) -> None:
     settings = get_settings()
     if not settings.smtp_host:
         if settings.app_env == "production":
             raise RuntimeError("SMTP is not configured")
-        logger.warning(
-            "Development email code: recipient=%s purpose=%s code=%s", email, purpose, code
-        )
+        logger.warning("Development email: recipient=%s subject=%s body=%s", to, subject, body)
         return
 
     message = EmailMessage()
     message["From"] = settings.smtp_from_email
-    message["To"] = email
-    message["Subject"] = "Код подтверждения Правбюро"
-    message.set_content(f"Код для операции «{purpose}»: {code}\nКод действует ограниченное время.")
+    message["To"] = to
+    message["Subject"] = subject
+    message.set_content(body)
 
     def deliver() -> None:
         with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=15) as smtp:
@@ -33,3 +31,20 @@ async def send_code(email: str, code: str, purpose: str) -> None:
             smtp.send_message(message)
 
     await asyncio.to_thread(deliver)
+
+
+async def send_code(email: str, code: str, purpose: str) -> None:
+    await _send_email(
+        email,
+        "Код подтверждения Правбюро",
+        f"Код для операции «{purpose}»: {code}\nКод действует ограниченное время.",
+    )
+
+
+async def send_referral_accepted_notice(email: str, applicant_name: str) -> None:
+    await _send_email(
+        email,
+        "Заявка по вашей рекомендации принята",
+        f"Заявка на консультацию от {applicant_name} по вашей рекомендации принята, "
+        "мы уже связываемся с ним.",
+    )
