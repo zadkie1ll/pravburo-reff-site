@@ -38,11 +38,11 @@ async def authenticate(session: AsyncSession, email: str, password: str) -> Agen
 
 async def begin_registration(
     session: AsyncSession, email: str, password: str
-) -> tuple[PendingRegistration, str]:
+) -> tuple[PendingRegistration, str] | None:
     settings = get_settings()
     normalized = normalize_email(email)
     if await session.scalar(select(Agent.id).where(Agent.email == normalized)):
-        raise ValueError("Такая почта уже используется")
+        return None
     await session.execute(
         delete(PendingRegistration).where(PendingRegistration.email == normalized)
     )

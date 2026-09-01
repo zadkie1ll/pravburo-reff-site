@@ -123,18 +123,24 @@ async def register(
             status_code=400,
         )
     try:
-        pending, code = await begin_registration(session, email, password)
-        await send_code(email, code, "регистрация")
-    except (ValueError, RuntimeError) as exc:
+        pending = await begin_registration(session, email, password)
+        if pending is not None:
+            await send_code(email, pending[1], "регистрация")
+    except RuntimeError as exc:
         return templates.TemplateResponse(
             request=request,
             name="register.html",
             context=context(request, error=str(exc)),
             status_code=400,
         )
-    request.session["registration_token"] = pending.token
+    if pending is None:
+        request.session.pop("registration_token", None)
+    else:
+        request.session["registration_token"] = pending[0].token
     return templates.TemplateResponse(
-        request=request, name="confirm_registration.html", context=context(request)
+        request=request,
+        name="confirm_registration.html",
+        context=context(request, info="Если почта свободна, код отправлен на неё"),
     )
 
 
