@@ -35,7 +35,8 @@ uv run uvicorn src.site.main:app --host 0.0.0.0 --port 8000
 docker compose up --build -d
 ```
 
-По умолчанию сервис публикуется только на `127.0.0.1:8040`.
+На production Compose использует host network, как существующие backend-сервисы
+Правбюро, и слушает только `127.0.0.1:8040`.
 
 ## UI preview
 

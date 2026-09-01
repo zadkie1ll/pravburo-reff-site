@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     public_base_url: str = "http://localhost:8000"
     session_secret: str = "development-only-change-me"
     legacy_webhook_secret: str = ""
-    crm_service_url: str = "http://pravburo-ref-crm:8000"
+    crm_service_url: str = "http://127.0.0.1:8042"
     internal_service_token: str = "development-internal-token"
     turnstile_site_key: str = ""
     turnstile_secret_key: str = ""
