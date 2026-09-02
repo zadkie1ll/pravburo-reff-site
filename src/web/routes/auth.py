@@ -4,6 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from pravburo_ref_common.database import get_session
+from pravburo_ref_common.models import AgentRole
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.auth import (
@@ -85,6 +86,10 @@ async def login(
             status_code=400,
         )
     request.session.clear()
+    if agent.role == AgentRole.ADMIN:
+        request.session["pending_admin_id"] = agent.id
+        destination = "/admin/2fa/verify" if agent.totp_enabled else "/admin/2fa/setup"
+        return RedirectResponse(destination, status_code=303)
     request.session["agent_id"] = agent.id
     return RedirectResponse("/cabinet", status_code=303)
 

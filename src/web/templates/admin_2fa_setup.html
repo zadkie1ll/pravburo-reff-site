@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Настройка 2FA · Правбюро{% endblock %}
+{% block content %}
+<section class="auth-card card"><p class="eyebrow">Администратор</p><h1>Настройте двухфакторную аутентификацию</h1>
+<p>Отсканируйте QR-код в приложении Google Authenticator, Яндекс.Ключ или похожем, затем введите код из приложения, чтобы подтвердить настройку.</p>
+{% if error %}<div class="alert">{{ error }}</div>{% endif %}
+<img class="qr" src="/admin/2fa/qr.png" alt="QR-код для настройки 2FA">
+<form method="post" action="/admin/2fa/setup"><input type="hidden" name="csrf" value="{{ csrf_token }}">
+<label>Код из приложения<input name="code" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autocomplete="one-time-code"></label>
+<button class="button" type="submit">Подтвердить и включить</button></form></section>
+{% endblock %}

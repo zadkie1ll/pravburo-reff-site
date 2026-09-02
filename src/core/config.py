@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     submission_rate_window_seconds: int = 60
     login_rate_limit: int = 5
     login_rate_window_seconds: int = 300
+    totp_rate_limit: int = 5
+    totp_rate_window_seconds: int = 300
     smtp_host: str = ""
     smtp_port: int = 587
     smtp_username: str = ""

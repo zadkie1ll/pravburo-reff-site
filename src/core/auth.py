@@ -20,6 +20,7 @@ from src.core.security import (
     normalize_email,
     verify_password,
 )
+from src.core.totp import generate_secret, verify_totp
 
 
 async def authenticate(session: AsyncSession, email: str, password: str) -> Agent | None:
@@ -34,6 +35,21 @@ async def authenticate(session: AsyncSession, email: str, password: str) -> Agen
     if row is None or not verify_password(password, row[1]):
         return None
     return row[0]
+
+
+async def get_or_create_totp_secret(session: AsyncSession, agent: Agent) -> str:
+    if not agent.totp_secret:
+        agent.totp_secret = generate_secret()
+        await session.commit()
+    return agent.totp_secret
+
+
+async def confirm_totp_setup(session: AsyncSession, agent: Agent, code: str) -> bool:
+    if not agent.totp_secret or not verify_totp(agent.totp_secret, code):
+        return False
+    agent.totp_enabled = True
+    await session.commit()
+    return True
 
 
 async def begin_registration(

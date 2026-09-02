@@ -30,6 +30,7 @@ class InMemoryRateLimiter:
 
 rate_limiter = InMemoryRateLimiter()
 login_rate_limiter = InMemoryRateLimiter()
+totp_rate_limiter = InMemoryRateLimiter()
 
 
 async def verify_turnstile(token: str, remote_ip: str) -> bool:
