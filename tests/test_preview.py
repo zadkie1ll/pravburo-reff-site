@@ -38,6 +38,7 @@ def test_all_preview_pages_render(client: TestClient, monkeypatch) -> None:
         "cabinet",
         "success",
         "faq",
+        "payouts",
         "client",
         "not-found",
     ]

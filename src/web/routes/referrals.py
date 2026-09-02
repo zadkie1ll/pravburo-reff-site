@@ -1,4 +1,5 @@
 import logging
+from collections import defaultdict
 from io import BytesIO
 from typing import Annotated
 from uuid import UUID
@@ -14,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.config import get_settings
 from src.core.email import send_referral_accepted_notice
 from src.core.security import csrf_token, masked_phone
+from src.services.payouts import REWARD_TYPE_LABELS, STATUS_LABELS, payout_status_slug
 from src.services.protection import rate_limiter, verify_turnstile
 from src.services.referrals import (
     ApplicationInput,
@@ -41,19 +43,21 @@ async def cabinet(request: Request, agent: CurrentAgent, session: Session) -> HT
             )
         ).all()
     )
-    rewards = {
-        reward.application_id: reward
-        for reward in (
-            await session.scalars(select(Reward).where(Reward.agent_id == agent.id))
-        ).all()
-    }
+    rewards_by_application: dict[int, list[Reward]] = defaultdict(list)
+    for reward in (await session.scalars(select(Reward).where(Reward.agent_id == agent.id))).all():
+        rewards_by_application[reward.application_id].append(reward)
     settings = get_settings()
     stats = await get_link_stats(session, agent.id)
     rows = [
         {
             "application": item,
             "phone": masked_phone(item.phone_normalized),
-            "reward": rewards.get(item.id),
+            "reward_summary": ", ".join(
+                f"{REWARD_TYPE_LABELS.get(r.reward_type, r.reward_type.value)}: "
+                f"{STATUS_LABELS[payout_status_slug(r)]}"
+                for r in rewards_by_application.get(item.id, [])
+            )
+            or "Договор не заключен",
         }
         for item in applications
     ]

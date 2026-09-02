@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, Response
 
 from src.core.config import get_settings
+from src.services.payouts import REWARD_TYPE_LABELS, STATUS_LABELS, PayoutFilters, PayoutRow
 from src.services.referrals import LinkStats
 from src.web.routes.faq import FAQ_ITEMS
 from src.web.routes.pages import templates
@@ -128,6 +129,7 @@ async def preview_index(request: Request, token: PreviewToken) -> HTMLResponse:
         ("Реферальная форма", "Публичная форма по UUID-ссылке", referral_url),
         ("Заявка принята", "Успешная отправка формы", f"/preview/page/success?{query}"),
         ("FAQ", "Как это работает и частые вопросы", f"/preview/page/faq?{query}"),
+        ("История выплат", "Таблица выплат с фильтрами и PDF", f"/preview/page/payouts?{query}"),
         ("Legacy-клиент", "Профиль из старого ЛК", f"/preview/page/client?{query}"),
         ("404", "Страница отсутствующего клиента", f"/preview/page/not-found?{query}"),
     ]
@@ -171,12 +173,12 @@ async def preview_page(request: Request, page: str, token: PreviewToken) -> HTML
         {
             "application": data["application_one"],
             "phone": "+7 *** ***-45-67",
-            "reward": data["reward_one"],
+            "reward_summary": "Аванс: Ожидает решения",
         },
         {
             "application": data["application_two"],
             "phone": "+7 *** ***-21-09",
-            "reward": data["reward_two"],
+            "reward_summary": "Аванс: Отклонено",
         },
     ]
     templates_by_page = {
@@ -210,6 +212,34 @@ async def preview_page(request: Request, page: str, token: PreviewToken) -> HTML
             },
         ),
         "client": ("dashboard.html", {"client": data["client"]}),
+        "payouts": (
+            "payouts.html",
+            {
+                "rows": [
+                    PayoutRow(
+                        reward=data["reward_one"],
+                        client_name=data["application_one"].full_name,
+                        type_label="Аванс",
+                        status_label="Ожидает решения",
+                        status_slug="pending",
+                        amount_label="3 000 ₽",
+                        payout_date_label="—",
+                    ),
+                    PayoutRow(
+                        reward=data["reward_two"],
+                        client_name=data["application_two"].full_name,
+                        type_label="Основная выплата",
+                        status_label="Выплачено",
+                        status_slug="paid",
+                        amount_label="45 000 ₽",
+                        payout_date_label="12.02.2026",
+                    ),
+                ],
+                "filters": PayoutFilters(),
+                "reward_types": REWARD_TYPE_LABELS,
+                "statuses": STATUS_LABELS,
+            },
+        ),
         "not-found": ("not_found.html", {}),
     }
     selected = templates_by_page.get(page)

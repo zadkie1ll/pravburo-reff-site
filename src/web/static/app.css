@@ -99,6 +99,13 @@ footer { width: min(1120px, calc(100% - 40px)); margin: auto auto 28px; color: v
 .footer-actions a { color: var(--blue); font-weight: 700; text-decoration: none; }
 .back-link { margin-top: 24px; }
 .back-link a { color: var(--blue); font-weight: 700; text-decoration: none; }
+.filter-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px; }
+.filter-row label { min-width: 160px; }
+.status-pill { display: inline-flex; padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; }
+.status-paid { color: #1f6b3a; background: #e7f5ea; }
+.status-scheduled { color: var(--navy); background: var(--pale); }
+.status-pending { color: #7a5b00; background: #fff3c4; }
+.status-rejected { color: #8c2828; background: #feecec; }
 
 @media (max-width: 760px) {
   .site-header { width: min(100% - 28px, 1120px); padding: 16px 0; }
