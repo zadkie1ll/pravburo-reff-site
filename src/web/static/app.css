@@ -106,6 +106,9 @@ footer { width: min(1120px, calc(100% - 40px)); margin: auto auto 28px; color: v
 .status-scheduled { color: var(--navy); background: var(--pale); }
 .status-pending { color: #7a5b00; background: #fff3c4; }
 .status-rejected { color: #8c2828; background: #feecec; }
+.onboarding-notes { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--line); display: grid; gap: 10px; }
+.onboarding-notes p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
+.onboarding-notes p strong { color: var(--ink); }
 
 @media (max-width: 760px) {
   .site-header { width: min(100% - 28px, 1120px); padding: 16px 0; }

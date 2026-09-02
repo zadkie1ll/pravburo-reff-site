@@ -10,19 +10,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.config import get_settings
 from src.core.email import send_admin_profile_change_notice
 from src.core.security import csrf_token, valid_csrf
-from src.services.profile import ProfileInput, update_profile
+from src.services.profile import EMPLOYMENT_FORMAT_LABELS, ProfileInput, update_profile
 from src.web.dependencies import CurrentAgent
 from src.web.routes.pages import templates
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["profile"])
 Session = Annotated[AsyncSession, Depends(get_session)]
-
-EMPLOYMENT_FORMAT_LABELS = {
-    EmploymentFormat.SELF_EMPLOYED: "Самозанятый",
-    EmploymentFormat.INDIVIDUAL_ENTREPRENEUR: "ИП",
-    EmploymentFormat.INDIVIDUAL: "Физлицо",
-}
 
 
 def _context(agent, *, error: str = "", info: str = "") -> dict:

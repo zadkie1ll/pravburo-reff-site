@@ -23,12 +23,19 @@ from src.core.security import (
     valid_email,
     verify_telegram_login,
 )
+from src.services.onboarding import needs_onboarding
 from src.services.protection import login_rate_limiter
 from src.services.social_auth import fetch_yandex_profile, login_social_agent, yandex_authorize_url
 from src.web.routes.pages import templates
 
 router = APIRouter(tags=["authentication"])
 Session = Annotated[AsyncSession, Depends(get_session)]
+
+
+def _log_in(request: Request, agent) -> RedirectResponse:
+    request.session["agent_id"] = agent.id
+    destination = "/onboarding" if needs_onboarding(agent) else "/cabinet"
+    return RedirectResponse(destination, status_code=303)
 
 
 def context(request: Request, *, error: str = "", info: str = "") -> dict:
@@ -90,8 +97,7 @@ async def login(
         request.session["pending_admin_id"] = agent.id
         destination = "/admin/2fa/verify" if agent.totp_enabled else "/admin/2fa/setup"
         return RedirectResponse(destination, status_code=303)
-    request.session["agent_id"] = agent.id
-    return RedirectResponse("/cabinet", status_code=303)
+    return _log_in(request, agent)
 
 
 @router.get("/register", response_class=HTMLResponse)
@@ -164,8 +170,7 @@ async def register_confirm(
                 session, request.session.get("registration_token", ""), code
             )
             request.session.clear()
-            request.session["agent_id"] = agent.id
-            return RedirectResponse("/cabinet", status_code=303)
+            return _log_in(request, agent)
         except ValueError as exc:
             error = str(exc)
     return templates.TemplateResponse(
@@ -226,8 +231,7 @@ async def reset_confirm(
                 session, request.session.get("reset_token", ""), code, password
             )
             request.session.clear()
-            request.session["agent_id"] = agent.id
-            return RedirectResponse("/cabinet", status_code=303)
+            return _log_in(request, agent)
         except ValueError as exc:
             error = str(exc)
     return templates.TemplateResponse(
@@ -265,8 +269,7 @@ async def telegram_callback(request: Request, session: Session):
         " ".join(filter(None, (payload.get("first_name"), payload.get("last_name")))),
     )
     request.session.clear()
-    request.session["agent_id"] = agent.id
-    return RedirectResponse("/cabinet", status_code=303)
+    return _log_in(request, agent)
 
 
 @router.get("/auth/yandex/start")
@@ -300,5 +303,4 @@ async def yandex_callback(request: Request, session: Session, code: str = "", st
             status_code=400,
         )
     request.session.clear()
-    request.session["agent_id"] = agent.id
-    return RedirectResponse("/cabinet", status_code=303)
+    return _log_in(request, agent)

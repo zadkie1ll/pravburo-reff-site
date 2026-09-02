@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Реквизиты для выплат · Правбюро{% endblock %}
+{% block content %}<section class="auth-card card"><p class="eyebrow">Шаг 2 из 2</p><h1>Реквизиты для выплат</h1>
+<p>Понадобятся для перечисления вознаграждения. Можно изменить позже в профиле.</p>
+{% if error %}<div class="alert">{{ error }}</div>{% endif %}
+<form class="lead-form" method="post" action="/onboarding/payout"><input type="hidden" name="csrf" value="{{ csrf_token }}">
+<label>Реквизиты для выплат<input name="payout_details" maxlength="200" placeholder="Номер карты или расчётный счёт" autofocus></label>
+<label>ИНН<input name="inn" maxlength="12" placeholder="10 или 12 цифр, для самозанятых и ИП"></label>
+<button class="button" type="submit">Готово</button></form></section>{% endblock %}

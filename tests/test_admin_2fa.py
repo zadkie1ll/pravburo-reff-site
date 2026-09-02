@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 from pravburo_ref_common.database import get_session
-from pravburo_ref_common.models import AgentRole
+from pravburo_ref_common.models import AgentRole, EmploymentFormat
 
 from src.core.totp import totp_now
 from src.main import app
@@ -96,7 +96,12 @@ def test_admin_login_with_2fa_enabled_redirects_to_verify(client, monkeypatch) -
 
 
 def test_regular_agent_login_skips_2fa(client, monkeypatch) -> None:
-    agent = SimpleNamespace(id=5, role=AgentRole.AGENT, email="agent@example.com")
+    agent = SimpleNamespace(
+        id=5,
+        role=AgentRole.AGENT,
+        email="agent@example.com",
+        employment_format=EmploymentFormat.SELF_EMPLOYED,
+    )
 
     async def _fake_authenticate(session, email, password):
         return agent

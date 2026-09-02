@@ -6,6 +6,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 INN_RE = re.compile(r"^\d{10}$|^\d{12}$")
 
+EMPLOYMENT_FORMAT_LABELS = {
+    EmploymentFormat.SELF_EMPLOYED: "Самозанятый",
+    EmploymentFormat.INDIVIDUAL_ENTREPRENEUR: "ИП",
+    EmploymentFormat.INDIVIDUAL: "Физлицо",
+}
+
 
 def validate_inn(employment_format: EmploymentFormat, inn: str) -> str | None:
     inn = inn.strip()
