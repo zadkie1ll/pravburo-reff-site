@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     session_max_age_seconds: int = 30 * 24 * 60 * 60
     legacy_webhook_secret: str = ""
     crm_service_url: str = "http://127.0.0.1:8042"
+    bitrix_lead_url_template: str = (
+        "https://prav-buro.bitrix24.ru/crm/lead/details/{lead_id}/"
+    )
     bounty_admin_url: str = "http://127.0.0.1:8041/admin/rewards"
     internal_service_token: str = "development-internal-token"
     turnstile_site_key: str = ""
@@ -50,6 +53,8 @@ class Settings(BaseSettings):
     telegram_bot_username: str = ""
     telegram_bot_token: str = ""
     telegram_login_max_age_seconds: int = 86400
+    telegram_notification_bot_token: str = ""
+    telegram_notification_chat_ids: str = ""
     telegram_manager_url: str = "https://t.me/pravburo_manager"
     telegram_materials_url: str = "https://t.me/pravburo_materials"
     yandex_client_id: str = ""
@@ -63,6 +68,14 @@ class Settings(BaseSettings):
     @property
     def admin_email_set(self) -> set[str]:
         return {email.strip().lower() for email in self.admin_emails.split(",") if email.strip()}
+
+    @property
+    def telegram_notification_chat_id_list(self) -> tuple[str, ...]:
+        return tuple(
+            chat_id.strip()
+            for chat_id in self.telegram_notification_chat_ids.split(",")
+            if chat_id.strip()
+        )
 
     @model_validator(mode="after")
     def validate_production_secrets(self) -> "Settings":

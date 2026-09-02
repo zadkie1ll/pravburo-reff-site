@@ -1,8 +1,12 @@
+import logging
+
 import httpx
 from pravburo_ref_common.contracts import LeadCreate
 from pravburo_ref_common.models import ReferralApplication
 
 from src.core.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 
 class CRMClient:
@@ -25,7 +29,16 @@ class CRMClient:
                 ).model_dump(mode="json"),
             )
         response.raise_for_status()
-        return str(response.json()["lead_id"])
+        result = response.json()
+        lead_id = result.get("lead_id")
+        if result.get("status") != "created" or not lead_id:
+            raise RuntimeError("CRM service did not confirm lead creation")
+        logger.info(
+            "CRM lead creation confirmed: application_id=%s lead_id=%s",
+            application.id,
+            lead_id,
+        )
+        return str(lead_id)
 
     async def get_deal_contact_phone(self, deal_id: str) -> str | None:
         settings = get_settings()

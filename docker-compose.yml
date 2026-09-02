@@ -5,5 +5,9 @@ services:
     build: .
     env_file: .env
     network_mode: host
+    # The hosting provider's DNS currently returns an unreachable Telegram edge.
+    # Keep the workaround scoped to this container instead of changing host DNS.
+    extra_hosts:
+      - "api.telegram.org:149.154.167.220"
     command: ["uv", "run", "--no-sync", "uvicorn", "src.site.main:app", "--host", "127.0.0.1", "--port", "${SITE_PORT:-8040}"]
     restart: unless-stopped

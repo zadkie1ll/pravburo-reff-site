@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.config import get_settings
 from src.core.email import send_referral_accepted_notice
 from src.core.security import csrf_token, masked_phone
+from src.core.telegram import send_new_referral_notice
 from src.services.payouts import REWARD_TYPE_LABELS, STATUS_LABELS, payout_status_slug
 from src.services.protection import rate_limiter, verify_turnstile
 from src.services.referrals import (
@@ -178,6 +179,14 @@ async def submit_referral(
             await send_referral_accepted_notice(agent.email, application.full_name)
         except Exception:
             logger.warning("Failed to notify agent about accepted referral: agent_id=%s", agent.id)
+    if created:
+        try:
+            await send_new_referral_notice(agent, application)
+        except Exception:
+            logger.warning(
+                "Failed to notify Telegram chats about accepted referral: agent_id=%s",
+                agent.id,
+            )
     return RedirectResponse(f"/r/{referral_code}/success", status_code=303)
 
 
