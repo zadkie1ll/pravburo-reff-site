@@ -7,6 +7,23 @@ if (document.querySelector(".preview-banner")) {
   });
 }
 
+var menuButton = document.querySelector(".menu-toggle");
+var mainNavigation = document.querySelector(".main-nav");
+if (menuButton && mainNavigation) {
+  menuButton.addEventListener("click", function () {
+    var isOpen = mainNavigation.classList.toggle("is-open");
+    menuButton.setAttribute("aria-expanded", String(isOpen));
+    menuButton.textContent = isOpen ? "×" : "☰";
+  });
+  mainNavigation.querySelectorAll("a").forEach(function (link) {
+    link.addEventListener("click", function () {
+      mainNavigation.classList.remove("is-open");
+      menuButton.setAttribute("aria-expanded", "false");
+      menuButton.textContent = "☰";
+    });
+  });
+}
+
 document.querySelectorAll("[data-copy-target]").forEach(function (button) {
   button.addEventListener("click", function () {
     var target = document.getElementById(button.getAttribute("data-copy-target"));

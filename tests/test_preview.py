@@ -33,14 +33,19 @@ def test_all_preview_pages_render(client: TestClient, monkeypatch) -> None:
         "login",
         "register",
         "confirm",
+        "onboarding",
+        "onboarding-payout",
         "reset",
         "reset-confirm",
         "cabinet",
+        "profile",
         "success",
         "faq",
         "payouts",
         "client",
         "not-found",
+        "2fa-setup",
+        "2fa-verify",
     ]
     urls = [f"/preview?token={PREVIEW_TOKEN}"]
     urls.extend(f"/preview/page/{page}?token={PREVIEW_TOKEN}" for page in pages)

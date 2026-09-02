@@ -7,27 +7,13 @@ from pravburo_ref_common.models import EmploymentFormat
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.security import csrf_token, valid_csrf
-from src.services.onboarding import save_basic_info, save_payout_info
+from src.services.onboarding import EMPLOYMENT_FORMAT_NOTES, save_basic_info, save_payout_info
 from src.services.profile import EMPLOYMENT_FORMAT_LABELS
 from src.web.dependencies import CurrentAgent
 from src.web.routes.pages import templates
 
 router = APIRouter(tags=["onboarding"])
 Session = Annotated[AsyncSession, Depends(get_session)]
-
-EMPLOYMENT_FORMAT_NOTES = {
-    EmploymentFormat.SELF_EMPLOYED: (
-        "Платите налог на профессиональный доход (НПД) самостоятельно — обычно 4-6%. "
-        "Чек на сумму выплаты формируется в приложении «Мой налог»."
-    ),
-    EmploymentFormat.INDIVIDUAL_ENTREPRENEUR: (
-        "Платите налоги самостоятельно по своей системе налогообложения (обычно УСН)."
-    ),
-    EmploymentFormat.INDIVIDUAL: (
-        "Мы удержим НДФЛ при выплате как налоговый агент — на руки придёт сумма за вычетом налога."
-    ),
-}
-
 
 def _basic_context(request: Request, *, display_name: str = "", error: str = "") -> dict:
     return {

@@ -9,9 +9,12 @@ from uuid import UUID
 import qrcode
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, Response
+from pravburo_ref_common.models import EmploymentFormat
 
 from src.core.config import get_settings
+from src.services.onboarding import EMPLOYMENT_FORMAT_NOTES
 from src.services.payouts import REWARD_TYPE_LABELS, STATUS_LABELS, PayoutFilters, PayoutRow
+from src.services.profile import EMPLOYMENT_FORMAT_LABELS
 from src.services.referrals import LinkStats
 from src.web.routes.faq import FAQ_ITEMS
 from src.web.routes.pages import templates
@@ -59,6 +62,12 @@ def sample_data(token: str) -> dict:
         display_name="Светлана Иванова",
         role=role_admin,
         referral_code=DUMMY_REFERRAL_CODE,
+        phone_normalized="+79991234567",
+        employment_format=EmploymentFormat.SELF_EMPLOYED,
+        payout_details="Карта •••• 4242",
+        inn="616700000000",
+        is_active=True,
+        created_at=datetime(2025, 1, 15, tzinfo=UTC),
     )
     first_application = SimpleNamespace(
         id=501,
@@ -123,15 +132,24 @@ async def preview_index(request: Request, token: PreviewToken) -> HTMLResponse:
         ("Вход", "Email, пароль и социальный вход", f"/preview/page/login?{query}"),
         ("Регистрация", "Создание агентского аккаунта", f"/preview/page/register?{query}"),
         ("Подтверждение", "Шестизначный код из письма", f"/preview/page/confirm?{query}"),
+        ("Первый вход", "ФИО и формат сотрудничества", f"/preview/page/onboarding?{query}"),
+        ("Реквизиты", "Второй шаг первого входа", f"/preview/page/onboarding-payout?{query}"),
         ("Восстановление", "Запрос кода восстановления", f"/preview/page/reset?{query}"),
         ("Новый пароль", "Код и установка пароля", f"/preview/page/reset-confirm?{query}"),
         ("Кабинет агента", "Ссылка, QR, клиенты и начисления", f"/preview/page/cabinet?{query}"),
+        ("Профиль", "Данные агента и реквизиты", f"/preview/page/profile?{query}"),
         ("Реферальная форма", "Публичная форма по UUID-ссылке", referral_url),
         ("Заявка принята", "Успешная отправка формы", f"/preview/page/success?{query}"),
         ("FAQ", "Как это работает и частые вопросы", f"/preview/page/faq?{query}"),
         ("История выплат", "Таблица выплат с фильтрами и PDF", f"/preview/page/payouts?{query}"),
         ("Legacy-клиент", "Профиль из старого ЛК", f"/preview/page/client?{query}"),
         ("404", "Страница отсутствующего клиента", f"/preview/page/not-found?{query}"),
+        (
+            "Настройка 2FA",
+            "Подключение приложения-аутентификатора",
+            f"/preview/page/2fa-setup?{query}",
+        ),
+        ("Проверка 2FA", "Ввод одноразового кода", f"/preview/page/2fa-verify?{query}"),
     ]
     return templates.TemplateResponse(
         request=request,
@@ -186,6 +204,15 @@ async def preview_page(request: Request, page: str, token: PreviewToken) -> HTML
         "login": ("login.html", {}),
         "register": ("register.html", {}),
         "confirm": ("confirm_registration.html", {}),
+        "onboarding": (
+            "onboarding_basic.html",
+            {
+                "display_name": data["agent"].display_name,
+                "employment_formats": EMPLOYMENT_FORMAT_LABELS,
+                "employment_format_notes": EMPLOYMENT_FORMAT_NOTES,
+            },
+        ),
+        "onboarding-payout": ("onboarding_payout.html", {}),
         "reset": ("password_reset.html", {}),
         "reset-confirm": (
             "password_reset_confirm.html",
@@ -203,6 +230,10 @@ async def preview_page(request: Request, page: str, token: PreviewToken) -> HTML
             },
         ),
         "success": ("referral_success.html", {}),
+        "profile": (
+            "profile.html",
+            {"agent": data["agent"], "employment_formats": EMPLOYMENT_FORMAT_LABELS},
+        ),
         "faq": (
             "faq.html",
             {
@@ -241,6 +272,8 @@ async def preview_page(request: Request, page: str, token: PreviewToken) -> HTML
             },
         ),
         "not-found": ("not_found.html", {}),
+        "2fa-setup": ("admin_2fa_setup.html", {"qr_url": data["qr_url"]}),
+        "2fa-verify": ("admin_2fa_verify.html", {}),
     }
     selected = templates_by_page.get(page)
     if selected is None:

@@ -3,6 +3,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.services.profile import validate_inn
 
+EMPLOYMENT_FORMAT_NOTES = {
+    EmploymentFormat.SELF_EMPLOYED: (
+        "Платите налог на профессиональный доход (НПД) самостоятельно — обычно 4-6%. "
+        "Чек на сумму выплаты формируется в приложении «Мой налог»."
+    ),
+    EmploymentFormat.INDIVIDUAL_ENTREPRENEUR: (
+        "Платите налоги самостоятельно по своей системе налогообложения (обычно УСН)."
+    ),
+    EmploymentFormat.INDIVIDUAL: (
+        "Мы удержим НДФЛ при выплате как налоговый агент — на руки придёт сумма за вычетом налога."
+    ),
+}
+
 
 def needs_onboarding(agent: Agent) -> bool:
     return agent.role == AgentRole.AGENT and agent.employment_format is None
