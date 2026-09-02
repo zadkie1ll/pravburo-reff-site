@@ -2,14 +2,50 @@ import logging
 from dataclasses import dataclass
 from typing import Protocol
 
-from pravburo_ref_common.models import Agent, DeliveryStatus, ReferralApplication
-from sqlalchemy import select
+from pravburo_ref_common.models import (
+    Agent,
+    DeliveryStatus,
+    ReferralApplication,
+    ReferralLinkVisit,
+)
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.security import normalize_phone
 
 logger = logging.getLogger(__name__)
+
+
+async def record_link_visit(session: AsyncSession, agent_id: int) -> None:
+    session.add(ReferralLinkVisit(agent_id=agent_id))
+    await session.commit()
+
+
+@dataclass(slots=True)
+class LinkStats:
+    visits: int
+    applications: int
+
+    @property
+    def conversion_rate_label(self) -> str:
+        if not self.visits:
+            return "—"
+        return f"{round(self.applications / self.visits * 100)}%"
+
+
+async def get_link_stats(session: AsyncSession, agent_id: int) -> LinkStats:
+    visits = await session.scalar(
+        select(func.count())
+        .select_from(ReferralLinkVisit)
+        .where(ReferralLinkVisit.agent_id == agent_id)
+    )
+    applications = await session.scalar(
+        select(func.count())
+        .select_from(ReferralApplication)
+        .where(ReferralApplication.agent_id == agent_id)
+    )
+    return LinkStats(visits=visits or 0, applications=applications or 0)
 
 
 class LeadDeliveryGateway(Protocol):

@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, Response
 
 from src.core.config import get_settings
+from src.services.referrals import LinkStats
 from src.web.routes.faq import FAQ_ITEMS
 from src.web.routes.pages import templates
 
@@ -196,6 +197,7 @@ async def preview_page(request: Request, page: str, token: PreviewToken) -> HTML
                 "referral_url": data["referral_url"],
                 "qr_url": data["qr_url"],
                 "bounty_admin_url": get_settings().bounty_admin_url,
+                "link_stats": LinkStats(visits=48, applications=2),
             },
         ),
         "success": ("referral_success.html", {}),

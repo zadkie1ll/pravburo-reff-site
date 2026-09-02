@@ -15,7 +15,12 @@ from src.core.config import get_settings
 from src.core.email import send_referral_accepted_notice
 from src.core.security import csrf_token, masked_phone
 from src.services.protection import rate_limiter, verify_turnstile
-from src.services.referrals import ApplicationInput, create_first_application
+from src.services.referrals import (
+    ApplicationInput,
+    create_first_application,
+    get_link_stats,
+    record_link_visit,
+)
 from src.site.crm_client import CRMClient
 from src.web.dependencies import CurrentAgent
 from src.web.routes.pages import templates
@@ -43,6 +48,7 @@ async def cabinet(request: Request, agent: CurrentAgent, session: Session) -> HT
         ).all()
     }
     settings = get_settings()
+    stats = await get_link_stats(session, agent.id)
     rows = [
         {
             "application": item,
@@ -59,6 +65,7 @@ async def cabinet(request: Request, agent: CurrentAgent, session: Session) -> HT
             "rows": rows,
             "referral_url": f"{settings.public_base_url}/r/{agent.referral_code}",
             "bounty_admin_url": settings.bounty_admin_url,
+            "link_stats": stats,
             "csrf_token": csrf_token(request.session),
         },
     )
@@ -80,6 +87,7 @@ async def referral_form(request: Request, referral_code: UUID, session: Session)
         return templates.TemplateResponse(
             request=request, name="not_found.html", context={}, status_code=404
         )
+    await record_link_visit(session, agent.id)
     return templates.TemplateResponse(
         request=request,
         name="referral_form.html",
