@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Заявки · Правбюро{% endblock %}
+{% block content %}
+<section class="card"><p class="eyebrow">Администратор</p><h1>Заявки</h1>
+<form method="get" action="/admin/applications"><label>Найти по имени или телефону<input type="text" name="q" value="{{ q }}" autofocus></label>
+<label>Статус доставки в Битрикс<select name="status">
+<option value=""{% if not status %} selected{% endif %}>Все</option>
+{% for value, label in status_options.items() %}<option value="{{ value.value }}"{% if status == value.value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+</select></label>
+<button class="button button-spaced" type="submit">Искать</button></form>
+<p>Всего: {{ page_result.total_count }}</p>
+</section>
+<section class="card table-card"><div class="table-wrap"><table><thead><tr><th>Клиент</th><th>Партнёр</th><th>Город</th><th>Сумма долга</th><th>Доставка</th><th>Дата заявки</th></tr></thead><tbody>
+{% for row in page_result.rows %}<tr>
+<td><strong>{{ row.application.full_name }}</strong><br>{{ row.application.phone_normalized }}</td>
+<td>{{ row.agent_name }}<br>{{ row.agent_email or '—' }}</td>
+<td>{{ row.application.city or '—' }}</td>
+<td>{{ row.application.debt_amount or '—' }}</td>
+<td>{{ status_options.get(row.application.delivery_status, row.application.delivery_status.value) }}{% if row.application.delivery_error %}<br><small>{{ row.application.delivery_error }}</small>{% endif %}</td>
+<td>{{ row.application.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+</tr>{% else %}<tr><td colspan="6">Заявки не найдены</td></tr>{% endfor %}
+</tbody></table></div></section>
+{% if page_result.total_pages > 1 %}<nav class="pagination" style="margin-top: 20px">
+{% if page_result.page > 1 %}<a href="/admin/applications?q={{ q }}&amp;status={{ status }}&amp;page={{ page_result.page - 1 }}">← Назад</a>{% endif %}
+<span>Страница {{ page_result.page }} из {{ page_result.total_pages }}</span>
+{% if page_result.page < page_result.total_pages %}<a href="/admin/applications?q={{ q }}&amp;status={{ status }}&amp;page={{ page_result.page + 1 }}">Вперёд →</a>{% endif %}
+</nav>{% endif %}
+<p style="margin-top: 20px"><a href="/admin">← Админ-панель</a></p>
+{% endblock %}

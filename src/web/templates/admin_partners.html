@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Партнёры · Правбюро{% endblock %}
+{% block content %}
+<section class="card"><p class="eyebrow">Администратор</p><h1>Партнёры</h1>
+<form method="get" action="/admin/partners"><label>Найти по имени, почте или телефону<input type="text" name="q" value="{{ q }}" autofocus></label>
+<button class="button button-spaced" type="submit">Искать</button></form>
+<p>Всего: {{ page_result.total_count }}</p>
+</section>
+<section class="card table-card"><div class="table-wrap"><table><thead><tr><th>Партнёр</th><th>Статус</th><th>Клиентов</th><th>Выплачено</th><th>Реквизиты</th><th>Заметка</th><th>Действия</th></tr></thead><tbody>
+{% for row in page_result.rows %}<tr>
+<td><strong>{{ row.agent.display_name or 'Без имени' }}</strong><br>{{ row.agent.email or '—' }}<br>{{ row.agent.phone_normalized or '—' }}</td>
+<td>{% if row.agent.is_active %}Активен{% else %}<span class="badge">Заблокирован</span>{% if row.agent.blocked_reason %}<br><small>{{ row.agent.blocked_reason }}</small>{% endif %}{% endif %}</td>
+<td>{{ row.client_count }}</td>
+<td>{{ row.total_paid }}</td>
+<td>{{ row.agent.payout_details or '—' }}</td>
+<td><form method="post" action="/admin/partners/{{ row.agent.id }}/note"><input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="q" value="{{ q }}"><input type="hidden" name="page" value="{{ page_result.page }}"><input type="text" name="note" value="{{ row.agent.admin_note or '' }}" placeholder="Заметка"><button class="button secondary" type="submit">Сохранить</button></form></td>
+<td>{% if row.agent.is_active %}<form method="post" action="/admin/partners/{{ row.agent.id }}/block"><input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="q" value="{{ q }}"><input type="hidden" name="page" value="{{ page_result.page }}"><input type="text" name="reason" placeholder="Причина блокировки" required><button class="button danger" type="submit">Заблокировать</button></form>{% else %}<form method="post" action="/admin/partners/{{ row.agent.id }}/unblock"><input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="q" value="{{ q }}"><input type="hidden" name="page" value="{{ page_result.page }}"><button class="button secondary" type="submit">Разблокировать</button></form>{% endif %}</td>
+</tr>{% else %}<tr><td colspan="7">Партнёры не найдены</td></tr>{% endfor %}
+</tbody></table></div></section>
+{% if page_result.total_pages > 1 %}<nav class="pagination" style="margin-top: 20px">
+{% if page_result.page > 1 %}<a href="/admin/partners?q={{ q }}&amp;page={{ page_result.page - 1 }}">← Назад</a>{% endif %}
+<span>Страница {{ page_result.page }} из {{ page_result.total_pages }}</span>
+{% if page_result.page < page_result.total_pages %}<a href="/admin/partners?q={{ q }}&amp;page={{ page_result.page + 1 }}">Вперёд →</a>{% endif %}
+</nav>{% endif %}
+<p style="margin-top: 20px"><a href="/admin">← Админ-панель</a></p>
+{% endblock %}

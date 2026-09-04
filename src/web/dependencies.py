@@ -19,6 +19,9 @@ async def require_agent(
     agent = await optional_agent(request, session)
     if agent is None:
         raise HTTPException(status_code=303, headers={"Location": "/login"})
+    if not agent.is_active:
+        request.session.clear()
+        raise HTTPException(status_code=303, headers={"Location": "/login"})
     return agent
 
 

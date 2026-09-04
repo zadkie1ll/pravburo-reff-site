@@ -9,6 +9,11 @@ router = APIRouter(prefix="/admin", tags=["admin panel"])
 
 SECTIONS = [
     {
+        "title": "Партнёры",
+        "description": "Список, поиск, блокировка, заметки.",
+        "url": "/admin/partners",
+    },
+    {
         "title": "Суммы override по сети",
         "description": "Фиксированная сумма за 1-3 уровень приглашённых.",
         "url": "/admin/network/rates",
@@ -17,6 +22,21 @@ SECTIONS = [
         "title": "Дерево сети",
         "description": "Поиск партнёра и просмотр его сети приглашений.",
         "url": "/admin/network/tree",
+    },
+    {
+        "title": "Заявки",
+        "description": "Все заявки от партнёров, статус доставки в Битрикс.",
+        "url": "/admin/applications",
+    },
+    {
+        "title": "Выплаты",
+        "description": "Календарь выплат, отметка «выплачено», просрочки.",
+        "url": "/admin/payouts",
+    },
+    {
+        "title": "Материалы",
+        "description": "Вопросы и ответы на странице «Как это работает».",
+        "url": "/admin/faq",
     },
 ]
 

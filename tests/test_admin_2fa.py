@@ -19,6 +19,7 @@ def _fake_admin(**overrides) -> SimpleNamespace:
         role=AgentRole.ADMIN,
         totp_secret=None,
         totp_enabled=False,
+        is_active=True,
     )
     defaults.update(overrides)
     return SimpleNamespace(**defaults)
@@ -101,6 +102,7 @@ def test_regular_agent_login_skips_2fa(client, monkeypatch) -> None:
         role=AgentRole.AGENT,
         email="agent@example.com",
         employment_format=EmploymentFormat.SELF_EMPLOYED,
+        is_active=True,
     )
 
     async def _fake_authenticate(session, email, password):

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Выплаты · Правбюро{% endblock %}
+{% block content %}
+<section class="card"><p class="eyebrow">Администратор</p><h1>Выплаты</h1>
+<p>Дата на календаре — фактическая дата выплаты, если она уже сделана, иначе плановый срок (одобрение + {{ overdue_days }} дн.). Выплата без даты одобрения не показана на календаре — она ещё не одобрена в сервисе вознаграждений.</p>
+<form method="post" action="/admin/payouts/settings" class="filter-row"><input type="hidden" name="csrf" value="{{ csrf_token }}">
+<label>Просрочка через, дней<input type="number" name="overdue_days" min="1" value="{{ overdue_days }}" required></label>
+<button class="button secondary" type="submit">Сохранить</button></form>
+</section>
+
+{% if overdue_rows %}
+<section class="card table-card"><h2>Просроченные выплаты</h2><div class="table-wrap"><table><thead><tr><th>Партнёр</th><th>Клиент</th><th>Тип</th><th>Сумма</th><th>Плановая дата</th><th></th></tr></thead><tbody>
+{% for row in overdue_rows %}<tr>
+<td>{{ row.agent_name }}</td>
+<td>{{ row.client_name }}</td>
+<td>{{ row.type_label }}</td>
+<td>{{ row.amount_label }}</td>
+<td>{{ row.target_date.strftime('%d.%m.%Y') if row.target_date else '—' }}</td>
+<td><form method="post" action="/admin/payouts/{{ row.reward.id }}/mark-paid"><input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="year" value="{{ year }}"><input type="hidden" name="month" value="{{ month }}"><input type="hidden" name="status" value="{{ status }}"><button class="button secondary" type="submit">Отметить как выплачено</button></form></td>
+</tr>{% endfor %}
+</tbody></table></div></section>
+{% endif %}
+
+<section class="card">
+<form method="get" action="/admin/payouts" class="filter-row">
+<input type="hidden" name="year" value="{{ year }}">
+<input type="hidden" name="month" value="{{ month }}">
+<label>Статус<select name="status">
+<option value=""{% if not status %} selected{% endif %}>Все</option>
+{% for slug, label in status_options.items() %}<option value="{{ slug }}"{% if status == slug %} selected{% endif %}>{{ label }}</option>{% endfor %}
+</select></label>
+<button class="button" type="submit">Показать</button>
+</form>
+<div class="footer-actions" style="margin-top: 20px">
+<a class="button secondary" href="/admin/payouts?year={{ prev_year }}&amp;month={{ prev_month }}&amp;status={{ status }}">← Предыдущий месяц</a>
+<strong>{{ month_label }}</strong>
+<a class="button secondary" href="/admin/payouts?year={{ next_year }}&amp;month={{ next_month }}&amp;status={{ status }}">Следующий месяц →</a>
+</div>
+</section>
+
+<section class="card table-card">
+<div class="calendar-grid">
+<div class="calendar-weekday">Пн</div><div class="calendar-weekday">Вт</div><div class="calendar-weekday">Ср</div><div class="calendar-weekday">Чт</div><div class="calendar-weekday">Пт</div><div class="calendar-weekday">Сб</div><div class="calendar-weekday">Вс</div>
+{% for week in weeks %}{% for day in week %}
+<div class="calendar-day{% if not day.in_month %} calendar-day-outside{% endif %}{% if day.is_today %} calendar-day-today{% endif %}">
+<span class="calendar-day-number">{{ day.date.day }}</span>
+{% for row in day.rows %}
+<div class="calendar-entry status-{{ row.status_slug }}">
+<span>{{ row.client_name }} · {{ row.amount_label }}</span>
+{% if row.status_slug in ("scheduled", "overdue") %}
+<form method="post" action="/admin/payouts/{{ row.reward.id }}/mark-paid">
+<input type="hidden" name="csrf" value="{{ csrf_token }}">
+<input type="hidden" name="year" value="{{ year }}">
+<input type="hidden" name="month" value="{{ month }}">
+<input type="hidden" name="status" value="{{ status }}">
+<button class="text-button" type="submit">Отметить как выплачено</button>
+</form>
+{% endif %}
+</div>
+{% endfor %}
+</div>
+{% endfor %}{% endfor %}
+</div>
+</section>
+
+<p style="margin-top: 20px"><a href="/admin">← Админ-панель</a></p>
+{% endblock %}

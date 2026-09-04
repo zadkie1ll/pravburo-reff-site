@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Материалы (FAQ) · Правбюро{% endblock %}
+{% block content %}
+<section class="card"><p class="eyebrow">Администратор</p><h1>Материалы</h1>
+<p>Вопросы и ответы, которые видны партнёрам на странице <a href="/faq" target="_blank">«Как это работает»</a>.</p>
+</section>
+
+<section class="card"><h2>Добавить вопрос</h2>
+<form method="post" action="/admin/faq/create"><input type="hidden" name="csrf" value="{{ csrf_token }}">
+<label>Вопрос<input type="text" name="question" required></label>
+<label>Ответ<textarea name="answer" rows="3" required></textarea></label>
+<button class="button button-spaced" type="submit">Добавить</button>
+</form>
+</section>
+
+{% for item in items %}
+<section class="card">
+<form method="post" action="/admin/faq/{{ item.id }}/update">
+<input type="hidden" name="csrf" value="{{ csrf_token }}">
+<label>Вопрос<input type="text" name="question" value="{{ item.question }}" required></label>
+<label>Ответ<textarea name="answer" rows="3" required>{{ item.answer }}</textarea></label>
+<button class="button secondary button-spaced" type="submit">Сохранить</button>
+</form>
+<div class="footer-actions" style="margin-top: 14px">
+<div>
+<form method="post" action="/admin/faq/{{ item.id }}/move" style="display: inline">
+<input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="direction" value="up">
+<button class="text-button" type="submit"{% if loop.first %} disabled{% endif %}>↑ Выше</button>
+</form>
+<form method="post" action="/admin/faq/{{ item.id }}/move" style="display: inline">
+<input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="direction" value="down">
+<button class="text-button" type="submit"{% if loop.last %} disabled{% endif %}>↓ Ниже</button>
+</form>
+</div>
+<form method="post" action="/admin/faq/{{ item.id }}/delete" onsubmit="return confirm('Удалить вопрос?')">
+<input type="hidden" name="csrf" value="{{ csrf_token }}">
+<button class="button danger" type="submit">Удалить</button>
+</form>
+</div>
+</section>
+{% else %}
+<section class="card"><p>Вопросов пока нет.</p></section>
+{% endfor %}
+
+<p style="margin-top: 20px"><a href="/admin">← Админ-панель</a></p>
+{% endblock %}

@@ -99,6 +99,7 @@ p { line-height: 1.65; }
 .form-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, .85fr); gap: 50px; align-items: start; }
 .card, .faq-list details { border: 1px solid rgba(54, 92, 128, .09); border-radius: 24px; background: linear-gradient(145deg, rgba(255, 255, 255, .98), rgba(232, 244, 255, .92)); box-shadow: var(--shadow); }
 .card { padding: 30px; }
+.page-shell > .card + .card { margin-top: 24px; }
 .card:hover { border-color: rgba(0, 128, 253, .16); }
 .card h2 { margin: 0 0 16px; color: #344b61; font-size: 25px; font-weight: 600; }
 .card-heading { display: flex; align-items: center; gap: 18px; }
@@ -150,6 +151,19 @@ td form { display: grid; gap: 9px; min-width: 230px; }
 .status-scheduled { color: var(--brand); background: var(--accent-soft); }
 .status-pending { color: var(--warning); background: #fff2bf; }
 .status-rejected { color: #8c2831; background: #feecef; }
+.status-overdue { color: #8c2831; background: #feecef; }
+
+.calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+.calendar-weekday { padding: 4px 6px; color: var(--muted); font-size: 12px; font-weight: 700; text-transform: uppercase; }
+.calendar-day { min-height: 90px; padding: 8px; border: 1px solid var(--line); border-radius: 12px; }
+.calendar-day-outside { opacity: .4; }
+.calendar-day-today { border-color: var(--accent); }
+.calendar-day-number { display: block; margin-bottom: 6px; color: var(--muted); font-size: 12px; font-weight: 700; }
+.calendar-entry { margin-top: 6px; padding: 6px 8px; border-radius: 8px; font-size: 12px; line-height: 1.35; }
+.calendar-entry.status-paid { color: var(--success); background: #e4f7eb; }
+.calendar-entry.status-scheduled { color: var(--brand); background: var(--accent-soft); }
+.calendar-entry.status-overdue { color: #8c2831; background: #feecef; }
+.calendar-entry .text-button { margin-top: 2px; font-size: 12px; }
 
 .faq-list { display: grid; gap: 14px; margin-bottom: 24px; }
 .faq-list details { padding: 19px 22px; }

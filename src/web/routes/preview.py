@@ -18,11 +18,21 @@ from src.services.onboarding import EMPLOYMENT_FORMAT_NOTES
 from src.services.payouts import REWARD_TYPE_LABELS, STATUS_LABELS, PayoutFilters, PayoutRow
 from src.services.profile import EMPLOYMENT_FORMAT_LABELS
 from src.services.referrals import LinkStats
-from src.web.routes.faq import FAQ_ITEMS
 from src.web.routes.pages import templates
 
 router = APIRouter(prefix="/preview", tags=["UI preview"])
 DUMMY_REFERRAL_CODE = UUID("00000000-0000-4000-8000-000000000001")
+DUMMY_FAQ_ITEMS = [
+    (
+        "Когда я получу деньги?",
+        "Аванс начисляется, когда клиент подписывает договор. Основная выплата — когда "
+        "клиент оплачивает депозит по делу. Статус каждой выплаты видно в вашем кабинете.",
+    ),
+    (
+        "Как узнать на каком этапе мой клиент?",
+        "Текущий статус по каждому клиенту виден в вашем кабинете.",
+    ),
+]
 
 
 def require_preview(token: str = Query(default="")) -> str:
@@ -247,7 +257,7 @@ async def preview_page(request: Request, page: str, token: PreviewToken) -> HTML
         "faq": (
             "faq.html",
             {
-                "faq_items": FAQ_ITEMS,
+                "faq_items": DUMMY_FAQ_ITEMS,
                 "telegram_manager_url": get_settings().telegram_manager_url,
                 "telegram_materials_url": get_settings().telegram_materials_url,
             },

@@ -28,6 +28,7 @@ def _fake_agent(**overrides) -> SimpleNamespace:
         employment_format=None,
         payout_details=None,
         inn=None,
+        is_active=True,
     )
     defaults.update(overrides)
     return SimpleNamespace(**defaults)

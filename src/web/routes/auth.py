@@ -96,6 +96,16 @@ async def login(
             context=context(request, error="Неверная почта или пароль"),
             status_code=400,
         )
+    if not agent.is_active:
+        error = "Аккаунт заблокирован."
+        if agent.blocked_reason:
+            error += f" Причина: {agent.blocked_reason}"
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context=context(request, error=error),
+            status_code=403,
+        )
     request.session.clear()
     if agent.role == AgentRole.ADMIN:
         request.session["pending_admin_id"] = agent.id

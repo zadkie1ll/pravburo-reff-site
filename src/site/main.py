@@ -17,8 +17,12 @@ from src.core.security_headers import SecurityHeadersMiddleware
 from src.integrations.legacy_lk.database import close_legacy_database
 from src.site.legacy_routes import router as legacy_router
 from src.web.routes.admin_2fa import router as admin_2fa_router
+from src.web.routes.admin_applications import router as admin_applications_router
+from src.web.routes.admin_faq import router as admin_faq_router
 from src.web.routes.admin_network import router as admin_network_router
 from src.web.routes.admin_panel import router as admin_panel_router
+from src.web.routes.admin_partners import router as admin_partners_router
+from src.web.routes.admin_payouts import router as admin_payouts_router
 from src.web.routes.auth import router as auth_router
 from src.web.routes.faq import router as faq_router
 from src.web.routes.health import router as health_router
@@ -67,8 +71,12 @@ app.include_router(health_router)
 app.include_router(api_v1_router)
 app.include_router(auth_router)
 app.include_router(admin_2fa_router)
+app.include_router(admin_applications_router)
+app.include_router(admin_faq_router)
 app.include_router(admin_network_router)
 app.include_router(admin_panel_router)
+app.include_router(admin_partners_router)
+app.include_router(admin_payouts_router)
 app.include_router(onboarding_router)
 app.include_router(referrals_router)
 app.include_router(faq_router)
