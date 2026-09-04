@@ -17,7 +17,7 @@ from src.services.network import NetworkSummary
 from src.services.onboarding import EMPLOYMENT_FORMAT_NOTES
 from src.services.payouts import REWARD_TYPE_LABELS, STATUS_LABELS, PayoutFilters, PayoutRow
 from src.services.profile import EMPLOYMENT_FORMAT_LABELS
-from src.services.referrals import LinkStats
+from src.services.referrals import ActivityStats, LinkStats
 from src.web.routes.pages import templates
 
 router = APIRouter(prefix="/preview", tags=["UI preview"])
@@ -239,6 +239,7 @@ async def preview_page(request: Request, page: str, token: PreviewToken) -> HTML
                 "qr_url": data["qr_url"],
                 "bounty_admin_url": get_settings().bounty_admin_url,
                 "link_stats": LinkStats(visits=48, applications=2),
+                "activity_stats": ActivityStats(applications=2, paying_clients=1),
                 "network_summary": NetworkSummary(
                     direct_invitees=3,
                     total_network_size=7,

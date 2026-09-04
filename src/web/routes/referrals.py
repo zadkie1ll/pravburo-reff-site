@@ -27,6 +27,7 @@ from src.services.protection import rate_limiter, verify_turnstile
 from src.services.referrals import (
     ApplicationInput,
     create_first_application,
+    get_activity_stats,
     get_link_stats,
     record_link_visit,
 )
@@ -57,6 +58,7 @@ async def cabinet(request: Request, agent: CurrentAgent, session: Session):
         rewards_by_application[reward.application_id].append(reward)
     settings = get_settings()
     stats = await get_link_stats(session, agent.id)
+    activity = get_activity_stats([item.id for item in applications], rewards_by_application)
     network_summary = await get_network_summary(session, agent.id)
     rows = [
         {
@@ -80,6 +82,7 @@ async def cabinet(request: Request, agent: CurrentAgent, session: Session):
             "referral_url": f"{settings.public_base_url}/r/{agent.referral_code}",
             "bounty_admin_url": settings.bounty_admin_url,
             "link_stats": stats,
+            "activity_stats": activity,
             "network_summary": network_summary,
             "network_override_paid": format_amount(network_summary.override_paid),
             "network_override_pending": format_amount(network_summary.override_pending),

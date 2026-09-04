@@ -48,6 +48,31 @@ async def get_link_stats(session: AsyncSession, agent_id: int) -> LinkStats:
     return LinkStats(visits=visits or 0, applications=applications or 0)
 
 
+@dataclass(slots=True)
+class ActivityStats:
+    applications: int
+    paying_clients: int
+
+    @property
+    def conversion_rate_label(self) -> str:
+        if not self.applications:
+            return "—"
+        return f"{round(self.paying_clients / self.applications * 100)}%"
+
+
+def get_activity_stats(
+    application_ids: list[int], rewards_by_application: dict[int, list]
+) -> ActivityStats:
+    """A client "paid" once any (non-override) reward exists for their
+    application - reward creation is triggered by a CRM deal stage change
+    (advance / deposit), so its mere presence means real money moved.
+    """
+    paying_clients = sum(
+        1 for app_id in application_ids if rewards_by_application.get(app_id)
+    )
+    return ActivityStats(applications=len(application_ids), paying_clients=paying_clients)
+
+
 class LeadDeliveryGateway(Protocol):
     async def create_lead(self, application: ReferralApplication, agent_name: str) -> str: ...
 
