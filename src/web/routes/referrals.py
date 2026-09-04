@@ -8,7 +8,7 @@ import qrcode
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from pravburo_ref_common.database import get_session
-from pravburo_ref_common.models import Agent, ReferralApplication, Reward
+from pravburo_ref_common.models import Agent, AgentRole, ReferralApplication, Reward
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,7 +16,13 @@ from src.core.config import get_settings
 from src.core.email import send_referral_accepted_notice
 from src.core.security import csrf_token, masked_phone
 from src.core.telegram import send_new_referral_notice
-from src.services.payouts import REWARD_TYPE_LABELS, STATUS_LABELS, payout_status_slug
+from src.services.network import get_network_summary
+from src.services.payouts import (
+    REWARD_TYPE_LABELS,
+    STATUS_LABELS,
+    format_amount,
+    payout_status_slug,
+)
 from src.services.protection import rate_limiter, verify_turnstile
 from src.services.referrals import (
     ApplicationInput,
@@ -34,7 +40,9 @@ Session = Annotated[AsyncSession, Depends(get_session)]
 
 
 @router.get("/cabinet", response_class=HTMLResponse)
-async def cabinet(request: Request, agent: CurrentAgent, session: Session) -> HTMLResponse:
+async def cabinet(request: Request, agent: CurrentAgent, session: Session):
+    if agent.role == AgentRole.ADMIN:
+        return RedirectResponse("/admin", status_code=303)
     applications = list(
         (
             await session.scalars(
@@ -49,6 +57,7 @@ async def cabinet(request: Request, agent: CurrentAgent, session: Session) -> HT
         rewards_by_application[reward.application_id].append(reward)
     settings = get_settings()
     stats = await get_link_stats(session, agent.id)
+    network_summary = await get_network_summary(session, agent.id)
     rows = [
         {
             "application": item,
@@ -71,6 +80,9 @@ async def cabinet(request: Request, agent: CurrentAgent, session: Session) -> HT
             "referral_url": f"{settings.public_base_url}/r/{agent.referral_code}",
             "bounty_admin_url": settings.bounty_admin_url,
             "link_stats": stats,
+            "network_summary": network_summary,
+            "network_override_paid": format_amount(network_summary.override_paid),
+            "network_override_pending": format_amount(network_summary.override_pending),
             "csrf_token": csrf_token(request.session),
         },
     )

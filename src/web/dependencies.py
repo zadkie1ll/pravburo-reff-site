@@ -6,7 +6,9 @@ from pravburo_ref_common.models import Agent, AgentRole
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-async def optional_agent(request: Request, session: AsyncSession) -> Agent | None:
+async def optional_agent(
+    request: Request, session: Annotated[AsyncSession, Depends(get_session)]
+) -> Agent | None:
     agent_id = request.session.get("agent_id")
     return await session.get(Agent, agent_id) if agent_id else None
 
@@ -38,5 +40,6 @@ async def require_pending_admin(
 
 
 CurrentAgent = Annotated[Agent, Depends(require_agent)]
+OptionalAgent = Annotated[Agent | None, Depends(optional_agent)]
 CurrentAdmin = Annotated[Agent, Depends(require_admin)]
 PendingAdmin = Annotated[Agent, Depends(require_pending_admin)]

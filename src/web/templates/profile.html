@@ -18,4 +18,4 @@
 <label>Реквизиты для выплат<input name="payout_details" maxlength="200" value="{{ agent.payout_details or '' }}" placeholder="Номер карты или расчётный счёт"></label>
 <label>ИНН<input name="inn" maxlength="12" value="{{ agent.inn or '' }}" placeholder="10 или 12 цифр, для самозанятых и ИП"></label>
 <button class="button" type="submit">Сохранить</button></form></section></div>
-<p class="back-link"><a href="/cabinet">← Вернуться в кабинет</a></p>{% endblock %}
+<p class="back-link">{% if agent.role.value == 'admin' %}<a href="/admin">Админ-панель</a> · {% endif %}<a href="/cabinet">← Вернуться в кабинет</a></p>{% endblock %}

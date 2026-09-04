@@ -3,4 +3,4 @@
 <section class="faq-list">{% for question, answer in faq_items %}<details><summary>{{ question }}</summary><p>{{ answer }}</p></details>{% endfor %}</section>
 <div class="dashboard-grid faq-links"><section class="card"><h2>Материалы</h2><p>Инструкции, презентации и ответы на вопросы — в чате с материалами.</p><a class="button" href="{{ telegram_materials_url }}" target="_blank" rel="noopener">Открыть материалы</a></section>
 <section class="card"><h2>Остались вопросы?</h2><p>Напишите менеджеру, если что-то не нашли в этом разделе.</p><a class="button secondary" href="{{ telegram_manager_url }}" target="_blank" rel="noopener">Написать менеджеру</a></section></div>
-<p class="back-link"><a href="/cabinet">← Вернуться в кабинет</a></p>{% endblock %}
+{% if agent %}<p class="back-link"><a href="/cabinet">← Вернуться в кабинет</a></p>{% endif %}{% endblock %}

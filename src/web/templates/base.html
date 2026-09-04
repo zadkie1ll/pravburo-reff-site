@@ -12,8 +12,9 @@
     {% if preview_mode %}
     <div class="preview-banner">Режим предпросмотра · используются только тестовые данные</div>
     {% endif %}
+    {% set brand_href = '/admin' if request.session.get('role') == 'admin' else ('/cabinet' if (request.session.get('agent_id') or preview_mode) else '/') %}
     <header class="site-header">
-      <a class="brand" href="/" aria-label="Правбюро — главная">
+      <a class="brand" href="{{ brand_href }}" aria-label="Правбюро — главная">
         <img class="brand-logo" src="{{ url_for('static', path='/img/logo.svg') }}" alt="Правбюро">
         <span class="brand-copy">
           <strong>Личный кабинет</strong>
@@ -37,7 +38,7 @@
     <main class="page-shell">{% block content %}{% endblock %}</main>
     <footer class="site-footer">
       <div class="footer-inner">
-        <a class="brand footer-brand" href="/">
+        <a class="brand footer-brand" href="{{ brand_href }}">
           <img class="brand-logo" src="{{ url_for('static', path='/img/logo.svg') }}" alt="Правбюро">
           <span class="brand-copy"><strong>Правбюро</strong><small>Агентская программа</small></span>
         </a>

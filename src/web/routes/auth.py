@@ -34,7 +34,11 @@ Session = Annotated[AsyncSession, Depends(get_session)]
 
 def _log_in(request: Request, agent) -> RedirectResponse:
     request.session["agent_id"] = agent.id
-    destination = "/onboarding" if needs_onboarding(agent) else "/cabinet"
+    request.session["role"] = agent.role.value
+    if agent.role == AgentRole.ADMIN:
+        destination = "/admin"
+    else:
+        destination = "/onboarding" if needs_onboarding(agent) else "/cabinet"
     return RedirectResponse(destination, status_code=303)
 
 

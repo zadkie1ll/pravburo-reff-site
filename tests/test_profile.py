@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 from pravburo_ref_common.database import get_session
-from pravburo_ref_common.models import EmploymentFormat
+from pravburo_ref_common.models import AgentRole, EmploymentFormat
 
 from src.main import app
 from src.web.dependencies import require_agent
@@ -18,6 +18,7 @@ def _fake_agent(**overrides) -> SimpleNamespace:
         email="agent@example.com",
         phone_normalized="+79991234567",
         display_name="Иван Иванов",
+        role=AgentRole.AGENT,
         employment_format=None,
         payout_details=None,
         inn=None,

@@ -1,5 +1,6 @@
 import hmac
 from datetime import UTC, datetime
+from decimal import Decimal
 from io import BytesIO
 from types import SimpleNamespace
 from typing import Annotated
@@ -12,6 +13,7 @@ from fastapi.responses import HTMLResponse, Response
 from pravburo_ref_common.models import EmploymentFormat
 
 from src.core.config import get_settings
+from src.services.network import NetworkSummary
 from src.services.onboarding import EMPLOYMENT_FORMAT_NOTES
 from src.services.payouts import REWARD_TYPE_LABELS, STATUS_LABELS, PayoutFilters, PayoutRow
 from src.services.profile import EMPLOYMENT_FORMAT_LABELS
@@ -227,6 +229,14 @@ async def preview_page(request: Request, page: str, token: PreviewToken) -> HTML
                 "qr_url": data["qr_url"],
                 "bounty_admin_url": get_settings().bounty_admin_url,
                 "link_stats": LinkStats(visits=48, applications=2),
+                "network_summary": NetworkSummary(
+                    direct_invitees=3,
+                    total_network_size=7,
+                    override_paid=Decimal("4200.00"),
+                    override_pending=Decimal("950.00"),
+                ),
+                "network_override_paid": "4 200 ₽",
+                "network_override_pending": "950 ₽",
             },
         ),
         "success": ("referral_success.html", {}),

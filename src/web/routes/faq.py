@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
 from src.core.config import get_settings
-from src.web.dependencies import CurrentAgent
+from src.web.dependencies import OptionalAgent
 from src.web.routes.pages import templates
 
 router = APIRouter(tags=["faq"])
@@ -37,7 +37,7 @@ FAQ_ITEMS = [
 
 
 @router.get("/faq", response_class=HTMLResponse)
-async def faq_page(request: Request, agent: CurrentAgent) -> HTMLResponse:
+async def faq_page(request: Request, agent: OptionalAgent) -> HTMLResponse:
     settings = get_settings()
     return templates.TemplateResponse(
         request=request,

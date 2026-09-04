@@ -150,7 +150,7 @@ def test_2fa_setup_confirm_with_correct_code_enables_and_logs_in(client) -> None
     )
 
     assert response.status_code == 303
-    assert response.headers["location"] == "/cabinet"
+    assert response.headers["location"] == "/admin"
     assert admin.totp_enabled is True
 
 
@@ -192,7 +192,7 @@ def test_2fa_verify_correct_code_logs_in(client) -> None:
     )
 
     assert response.status_code == 303
-    assert response.headers["location"] == "/cabinet"
+    assert response.headers["location"] == "/admin"
 
 
 def test_2fa_verify_is_rate_limited_after_repeated_wrong_attempts(client) -> None:

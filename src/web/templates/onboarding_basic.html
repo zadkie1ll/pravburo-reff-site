@@ -5,6 +5,7 @@
 {% if error %}<div class="alert">{{ error }}</div>{% endif %}
 <form class="lead-form" method="post" action="/onboarding"><input type="hidden" name="csrf" value="{{ csrf_token }}">
 <label>ФИО<input name="display_name" maxlength="200" value="{{ display_name }}" required autofocus></label>
+<label>Телефон<input type="tel" name="phone" maxlength="20" value="{{ phone }}" required placeholder="+7 999 000-00-00"></label>
 <label>Формат сотрудничества<select name="employment_format" required>{% for value, label in employment_formats.items() %}<option value="{{ value.value }}">{{ label }}</option>{% endfor %}</select></label>
 <button class="button" type="submit">Продолжить</button></form>
 <div class="onboarding-notes"><p class="label">Как это влияет на налоги</p>{% for value, note in employment_format_notes.items() %}<p><strong>{{ employment_formats[value] }}</strong> — {{ note }}</p>{% endfor %}</div>

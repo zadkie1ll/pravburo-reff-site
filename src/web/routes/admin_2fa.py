@@ -84,7 +84,8 @@ async def setup_confirm(
         )
     request.session.pop("pending_admin_id", None)
     request.session["agent_id"] = admin.id
-    return RedirectResponse("/cabinet", status_code=303)
+    request.session["role"] = admin.role.value
+    return RedirectResponse("/admin", status_code=303)
 
 
 @router.get("/verify", response_class=HTMLResponse)
@@ -131,4 +132,5 @@ async def verify_confirm(
         )
     request.session.pop("pending_admin_id", None)
     request.session["agent_id"] = admin.id
-    return RedirectResponse("/cabinet", status_code=303)
+    request.session["role"] = admin.role.value
+    return RedirectResponse("/admin", status_code=303)

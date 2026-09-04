@@ -23,6 +23,8 @@ def _fake_agent(**overrides) -> SimpleNamespace:
         email="fresh@example.com",
         role=AgentRole.AGENT,
         display_name="",
+        phone_normalized=None,
+        invited_by_agent_id=None,
         employment_format=None,
         payout_details=None,
         inn=None,
@@ -33,6 +35,9 @@ def _fake_agent(**overrides) -> SimpleNamespace:
 
 class _NoOpSession:
     async def commit(self) -> None:
+        return None
+
+    async def scalar(self, *args, **kwargs):
         return None
 
 
@@ -124,6 +129,7 @@ def test_onboarding_basic_submit_saves_and_redirects_to_payout(client) -> None:
         "/onboarding",
         data={
             "display_name": "Иван Иванов",
+            "phone": "+7 999 123-45-67",
             "employment_format": EmploymentFormat.SELF_EMPLOYED.value,
             "csrf": csrf,
         },
@@ -133,6 +139,7 @@ def test_onboarding_basic_submit_saves_and_redirects_to_payout(client) -> None:
     assert response.status_code == 303
     assert response.headers["location"] == "/onboarding/payout"
     assert agent.display_name == "Иван Иванов"
+    assert agent.phone_normalized == "+79991234567"
     assert agent.employment_format == EmploymentFormat.SELF_EMPLOYED
 
 
@@ -145,6 +152,7 @@ def test_onboarding_basic_submit_requires_display_name(client) -> None:
         "/onboarding",
         data={
             "display_name": "   ",
+            "phone": "+7 999 123-45-67",
             "employment_format": EmploymentFormat.SELF_EMPLOYED.value,
             "csrf": csrf,
         },

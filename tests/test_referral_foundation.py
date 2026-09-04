@@ -12,7 +12,8 @@ def test_database_constraints_enforce_first_attribution_and_one_reward() -> None
         for constraint in ReferralApplication.__table__.constraints
     )
     assert any(
-        constraint.name == "uq_rewards_deal_id" for constraint in Reward.__table__.constraints
+        index.name == "uq_rewards_deal_id_reward_type_agent_id"
+        for index in Reward.__table__.indexes
     )
     assert Agent.__table__.schema == "referral"
 

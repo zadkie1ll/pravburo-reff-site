@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Сеть партнёров · Правбюро{% endblock %}
+{% block content %}
+<section class="card"><p class="eyebrow">Администратор</p><h1>Сеть партнёров</h1>
+<form method="get" action="/admin/network/tree"><label>Найти партнёра по имени или почте<input type="text" name="q" value="{{ q }}" autofocus></label>
+<button class="button button-spaced" type="submit">Искать</button></form>
+{% if q and not matches %}<p>Ничего не найдено</p>{% endif %}
+{% if matches %}<ul class="network-matches">{% for agent in matches %}<li><a href="/admin/network/tree?root={{ agent.id }}">{{ agent.display_name or agent.email or ('#' ~ agent.id) }}</a> — {{ agent.email or 'без почты' }}</li>{% endfor %}</ul>{% endif %}
+{% if root_agent %}
+<p style="margin-top: 20px"><a href="/admin/network/tree{% if q %}?q={{ q }}{% endif %}">← Назад к поиску</a></p>
+<h2>Дерево: {{ root_agent.display_name or root_agent.email or ('#' ~ root_agent.id) }}</h2>
+<ul class="network-tree">{% for node in tree %}<li style="margin-left: {{ node.depth * 24 }}px">{{ node.display_name or node.email or ('#' ~ node.id) }}{% if not node.is_active %} <span class="badge">неактивен</span>{% endif %} — {{ node.email or 'без почты' }}{% if node.phone_normalized %}, {{ node.phone_normalized }}{% endif %}</li>{% endfor %}</ul>
+{% endif %}
+<p style="margin-top: 20px"><a href="/admin">← Админ-панель</a></p>
+</section>{% endblock %}

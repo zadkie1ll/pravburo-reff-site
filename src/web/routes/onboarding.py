@@ -6,7 +6,7 @@ from pravburo_ref_common.database import get_session
 from pravburo_ref_common.models import EmploymentFormat
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.security import csrf_token, valid_csrf
+from src.core.security import csrf_token, normalize_phone, valid_csrf
 from src.services.onboarding import EMPLOYMENT_FORMAT_NOTES, save_basic_info, save_payout_info
 from src.services.profile import EMPLOYMENT_FORMAT_LABELS
 from src.web.dependencies import CurrentAgent
@@ -15,10 +15,13 @@ from src.web.routes.pages import templates
 router = APIRouter(tags=["onboarding"])
 Session = Annotated[AsyncSession, Depends(get_session)]
 
-def _basic_context(request: Request, *, display_name: str = "", error: str = "") -> dict:
+def _basic_context(
+    request: Request, *, display_name: str = "", phone: str = "", error: str = ""
+) -> dict:
     return {
         "csrf_token": csrf_token(request.session),
         "display_name": display_name,
+        "phone": phone,
         "employment_formats": EMPLOYMENT_FORMAT_LABELS,
         "employment_format_notes": EMPLOYMENT_FORMAT_NOTES,
         "error": error,
@@ -30,7 +33,9 @@ async def onboarding_basic(request: Request, agent: CurrentAgent) -> HTMLRespons
     return templates.TemplateResponse(
         request=request,
         name="onboarding_basic.html",
-        context=_basic_context(request, display_name=agent.display_name),
+        context=_basic_context(
+            request, display_name=agent.display_name, phone=agent.phone_normalized or ""
+        ),
     )
 
 
@@ -40,6 +45,7 @@ async def onboarding_basic_submit(
     agent: CurrentAgent,
     session: Session,
     display_name: Annotated[str, Form(max_length=200)],
+    phone: Annotated[str, Form(max_length=20)],
     employment_format: Annotated[EmploymentFormat, Form()],
     csrf: Annotated[str, Form()] = "",
 ):
@@ -47,17 +53,38 @@ async def onboarding_basic_submit(
         return templates.TemplateResponse(
             request=request,
             name="onboarding_basic.html",
-            context=_basic_context(request, display_name=display_name, error="Обновите страницу"),
+            context=_basic_context(
+                request, display_name=display_name, phone=phone, error="Обновите страницу"
+            ),
             status_code=400,
         )
     if not display_name.strip():
         return templates.TemplateResponse(
             request=request,
             name="onboarding_basic.html",
-            context=_basic_context(request, display_name=display_name, error="Укажите ФИО"),
+            context=_basic_context(
+                request, display_name=display_name, phone=phone, error="Укажите ФИО"
+            ),
             status_code=400,
         )
-    await save_basic_info(session, agent, display_name, employment_format)
+    try:
+        normalized_phone = normalize_phone(phone)
+    except ValueError as exc:
+        return templates.TemplateResponse(
+            request=request,
+            name="onboarding_basic.html",
+            context=_basic_context(request, display_name=display_name, phone=phone, error=str(exc)),
+            status_code=400,
+        )
+    try:
+        await save_basic_info(session, agent, display_name, normalized_phone, employment_format)
+    except ValueError as exc:
+        return templates.TemplateResponse(
+            request=request,
+            name="onboarding_basic.html",
+            context=_basic_context(request, display_name=display_name, phone=phone, error=str(exc)),
+            status_code=400,
+        )
     return RedirectResponse("/onboarding/payout", status_code=303)
 
 
