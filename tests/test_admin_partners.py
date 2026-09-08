@@ -114,6 +114,41 @@ async def test_block_and_unblock_partner() -> None:
             await session.commit()
 
 
+async def test_status_filter_shows_only_matching_partners() -> None:
+    marker = uuid.uuid4().hex[:8]
+    async with session_factory() as session:
+        active_agent = Agent(
+            email=f"{uuid.uuid4()}@example.test", display_name=f"Активный{marker}"
+        )
+        blocked_agent = Agent(
+            email=f"{uuid.uuid4()}@example.test",
+            display_name=f"Блокированный{marker}",
+            is_active=False,
+            blocked_reason="Тест",
+        )
+        session.add_all([active_agent, blocked_agent])
+        await session.commit()
+        active_id, blocked_id = active_agent.id, blocked_agent.id
+
+    app.dependency_overrides[require_admin] = lambda: FAKE_ADMIN
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            active_only = await client.get(f"/admin/partners?q={marker}&status=active")
+            blocked_only = await client.get(f"/admin/partners?q={marker}&status=blocked")
+    finally:
+        app.dependency_overrides.pop(require_admin, None)
+        async with session_factory() as session:
+            await session.execute(delete(Agent).where(Agent.id.in_([active_id, blocked_id])))
+            await session.commit()
+
+    assert f"Активный{marker}" in active_only.text
+    assert f"Блокированный{marker}" not in active_only.text
+    assert f"Блокированный{marker}" in blocked_only.text
+    assert f"Активный{marker}" not in blocked_only.text
+
+
 async def test_admin_cannot_be_blocked_via_partners_panel() -> None:
     async with session_factory() as session:
         target_admin = Agent(

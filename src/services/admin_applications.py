@@ -1,6 +1,12 @@
 from dataclasses import dataclass
 
-from pravburo_ref_common.models import Agent, DeliveryStatus, ReferralApplication
+from pravburo_ref_common.models import (
+    Agent,
+    AgentRole,
+    DeliveryStatus,
+    ProcessingStatus,
+    ReferralApplication,
+)
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,6 +17,18 @@ DELIVERY_STATUS_LABELS = {
     DeliveryStatus.SENT: "Отправлена",
     DeliveryStatus.FAILED: "Ошибка отправки",
 }
+
+PROCESSING_STATUS_LABELS = {
+    ProcessingStatus.NEW: "Новая",
+    ProcessingStatus.IN_PROGRESS: "В работе",
+    ProcessingStatus.CLOSED: "Закрыта",
+}
+
+
+@dataclass(frozen=True, slots=True)
+class ManagerOption:
+    id: int
+    label: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,3 +93,33 @@ async def list_applications(
         total_pages=total_pages,
         total_count=total_count,
     )
+
+
+async def list_managers(session: AsyncSession) -> list[ManagerOption]:
+    admins = (
+        await session.scalars(
+            select(Agent).where(Agent.role == AgentRole.ADMIN).order_by(Agent.display_name)
+        )
+    ).all()
+    return [
+        ManagerOption(id=admin.id, label=admin.display_name or admin.email or f"#{admin.id}")
+        for admin in admins
+    ]
+
+
+async def set_processing_status(
+    session: AsyncSession, application_id: int, status: ProcessingStatus
+) -> None:
+    application = await session.get(ReferralApplication, application_id)
+    if application is not None:
+        application.processing_status = status
+        await session.commit()
+
+
+async def assign_manager(
+    session: AsyncSession, application_id: int, manager_id: int | None
+) -> None:
+    application = await session.get(ReferralApplication, application_id)
+    if application is not None:
+        application.assigned_manager_id = manager_id
+        await session.commit()

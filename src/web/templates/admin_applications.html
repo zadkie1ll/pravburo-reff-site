@@ -10,15 +10,22 @@
 <button class="button button-spaced" type="submit">Искать</button></form>
 <p>Всего: {{ page_result.total_count }}</p>
 </section>
-<section class="card table-card"><div class="table-wrap"><table><thead><tr><th>Клиент</th><th>Партнёр</th><th>Город</th><th>Сумма долга</th><th>Доставка</th><th>Дата заявки</th></tr></thead><tbody>
+<section class="card table-card"><div class="table-wrap"><table><thead><tr><th>Клиент</th><th>Партнёр</th><th>Город</th><th>Сумма долга</th><th>Доставка</th><th>Обработка</th><th>Менеджер</th><th>Дата заявки</th></tr></thead><tbody>
 {% for row in page_result.rows %}<tr>
 <td><strong>{{ row.application.full_name }}</strong><br>{{ row.application.phone_normalized }}</td>
 <td>{{ row.agent_name }}<br>{{ row.agent_email or '—' }}</td>
 <td>{{ row.application.city or '—' }}</td>
 <td>{{ row.application.debt_amount or '—' }}</td>
 <td>{{ status_options.get(row.application.delivery_status, row.application.delivery_status.value) }}{% if row.application.delivery_error %}<br><small>{{ row.application.delivery_error }}</small>{% endif %}</td>
+<td><form method="post" action="/admin/applications/{{ row.application.id }}/status"><input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="q" value="{{ q }}"><input type="hidden" name="status" value="{{ status }}"><input type="hidden" name="page" value="{{ page_result.page }}"><select name="processing_status" onchange="this.form.submit()">
+{% for value, label in processing_status_options.items() %}<option value="{{ value.value }}"{% if row.application.processing_status == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
+</select></form></td>
+<td><form method="post" action="/admin/applications/{{ row.application.id }}/manager"><input type="hidden" name="csrf" value="{{ csrf_token }}"><input type="hidden" name="q" value="{{ q }}"><input type="hidden" name="status" value="{{ status }}"><input type="hidden" name="page" value="{{ page_result.page }}"><select name="manager_id" onchange="this.form.submit()">
+<option value=""{% if not row.application.assigned_manager_id %} selected{% endif %}>Не назначен</option>
+{% for manager in managers %}<option value="{{ manager.id }}"{% if row.application.assigned_manager_id == manager.id %} selected{% endif %}>{{ manager.label }}</option>{% endfor %}
+</select></form></td>
 <td>{{ row.application.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
-</tr>{% else %}<tr><td colspan="6">Заявки не найдены</td></tr>{% endfor %}
+</tr>{% else %}<tr><td colspan="8">Заявки не найдены</td></tr>{% endfor %}
 </tbody></table></div></section>
 {% if page_result.total_pages > 1 %}<nav class="pagination" style="margin-top: 20px">
 {% if page_result.page > 1 %}<a href="/admin/applications?q={{ q }}&amp;status={{ status }}&amp;page={{ page_result.page - 1 }}">← Назад</a>{% endif %}
