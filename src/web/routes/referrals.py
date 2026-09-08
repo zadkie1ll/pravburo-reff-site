@@ -16,6 +16,7 @@ from src.core.config import get_settings
 from src.core.email import send_referral_accepted_notice
 from src.core.security import csrf_token, masked_phone
 from src.core.telegram import send_new_referral_notice
+from src.services.deal_stages import stage_label
 from src.services.network import get_network_summary
 from src.services.payouts import (
     REWARD_TYPE_LABELS,
@@ -64,6 +65,7 @@ async def cabinet(request: Request, agent: CurrentAgent, session: Session):
         {
             "application": item,
             "phone": masked_phone(item.phone_normalized),
+            "stage_label": stage_label(item.deal_stage_code),
             "reward_summary": ", ".join(
                 f"{REWARD_TYPE_LABELS.get(r.reward_type, r.reward_type.value)}: "
                 f"{STATUS_LABELS[payout_status_slug(r)]}"

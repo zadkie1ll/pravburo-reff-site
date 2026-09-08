@@ -1,5 +1,6 @@
 import logging
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from typing import Protocol
 
 from pravburo_ref_common.models import (
@@ -7,14 +8,16 @@ from pravburo_ref_common.models import (
     DeliveryStatus,
     ReferralApplication,
     ReferralLinkVisit,
+    Reward,
 )
 from sqlalchemy import func, select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.security import normalize_phone
 
 logger = logging.getLogger(__name__)
+
+FIXATION_EXPIRY_DAYS = 180
 
 
 async def record_link_visit(session: AsyncSession, agent_id: int) -> None:
@@ -87,6 +90,22 @@ class ApplicationInput:
     situation: str = ""
 
 
+async def _fixation_is_active(session: AsyncSession, application: ReferralApplication) -> bool:
+    """A client stays fixed to their agent forever once they've paid (a
+    Reward exists), otherwise the fixation rots 180 days after the first
+    application - after that, another agent may claim the same phone.
+    """
+    has_reward = (
+        await session.scalar(
+            select(Reward.id).where(Reward.application_id == application.id).limit(1)
+        )
+    ) is not None
+    if has_reward:
+        return True
+    age = datetime.now(UTC) - application.created_at
+    return age <= timedelta(days=FIXATION_EXPIRY_DAYS)
+
+
 async def create_first_application(
     session: AsyncSession,
     agent: Agent,
@@ -94,6 +113,15 @@ async def create_first_application(
     lead_delivery: LeadDeliveryGateway,
 ) -> tuple[ReferralApplication, bool]:
     phone = normalize_phone(data.phone)
+    latest = await session.scalar(
+        select(ReferralApplication)
+        .where(ReferralApplication.phone_normalized == phone)
+        .order_by(ReferralApplication.created_at.desc())
+        .limit(1)
+    )
+    if latest is not None and await _fixation_is_active(session, latest):
+        return latest, False
+
     application = ReferralApplication(
         agent_id=agent.id,
         full_name=data.full_name.strip(),
@@ -104,17 +132,8 @@ async def create_first_application(
         situation=data.situation.strip() or None,
     )
     session.add(application)
-    try:
-        await session.commit()
-        await session.refresh(application)
-    except IntegrityError:
-        await session.rollback()
-        existing = await session.scalar(
-            select(ReferralApplication).where(ReferralApplication.phone_normalized == phone)
-        )
-        if existing is None:
-            raise
-        return existing, False
+    await session.commit()
+    await session.refresh(application)
 
     try:
         application.bitrix_lead_id = await lead_delivery.create_lead(

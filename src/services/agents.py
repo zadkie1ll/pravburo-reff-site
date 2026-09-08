@@ -17,9 +17,10 @@ async def link_agent_to_referrer(session: AsyncSession, agent: Agent) -> None:
     if agent.invited_by_agent_id is not None or agent.phone_normalized is None:
         return
     application = await session.scalar(
-        select(ReferralApplication).where(
-            ReferralApplication.phone_normalized == agent.phone_normalized
-        )
+        select(ReferralApplication)
+        .where(ReferralApplication.phone_normalized == agent.phone_normalized)
+        .order_by(ReferralApplication.created_at.desc())
+        .limit(1)
     )
     if application is not None and application.agent_id != agent.id:
         agent.invited_by_agent_id = application.agent_id
