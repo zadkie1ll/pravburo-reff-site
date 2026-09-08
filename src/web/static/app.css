@@ -87,8 +87,12 @@ p { line-height: 1.65; }
 .preview-banner + .site-header + .page-shell { margin-top: 38px; }
 .page-shell { width: min(1120px, calc(100% - 40px)); margin: 54px auto 76px; flex: 1; }
 .hero { max-width: 780px; margin: 0 0 38px; }
+.hero.hero-wide { max-width: none; }
 .hero.compact { margin: clamp(70px, 12vh, 130px) 0; }
 .hero h1, .auth-card h1, .not-found h1 { margin: 0; color: #33475c; font-size: clamp(36px, 5vw, 58px); font-weight: 600; line-height: 1.08; letter-spacing: -.035em; }
+.hero-header-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: nowrap; gap: 24px; }
+.hero-header-row h1 { font-size: clamp(28px, 3.2vw, 40px); white-space: nowrap; }
+.hero-header-row .button { flex-shrink: 0; }
 .auth-card h1 { font-size: clamp(32px, 4vw, 44px); }
 .hero > p:last-child, .auth-card > p, .card > p { color: var(--muted); }
 .hero > p:last-child { max-width: 680px; margin: 18px 0 0; font-size: 19px; }
@@ -222,6 +226,8 @@ td form { display: grid; gap: 9px; min-width: 230px; }
   .details div { display: block; }
   .details dd { margin-top: 5px; text-align: left; }
   .copy-row, .footer-actions { display: grid; }
+  .hero-header-row { flex-wrap: wrap; }
+  .hero-header-row h1 { white-space: normal; }
   .copy-row .button { width: 100%; }
   .footer-inner { width: min(100% - 28px, 1120px); grid-template-columns: 1fr; text-align: center; }
   .footer-brand { justify-content: center; }
@@ -229,5 +235,22 @@ td form { display: grid; gap: 9px; min-width: 230px; }
   .footer-meta { grid-column: 1; }
   th, td { padding: 12px 10px; }
 }
+
+/* CSP sets style-src 'self' (no 'unsafe-inline'), so inline style="" attributes
+   are silently dropped by the browser - use these utility classes instead. */
+.mt-14 { margin-top: 14px; }
+.mt-20 { margin-top: 20px; }
+.inline-form { display: inline; }
+.indent-0 { margin-left: 0; }
+.indent-1 { margin-left: 24px; }
+.indent-2 { margin-left: 48px; }
+.indent-3 { margin-left: 72px; }
+.indent-4 { margin-left: 96px; }
+.indent-5 { margin-left: 120px; }
+.indent-6 { margin-left: 144px; }
+.indent-7 { margin-left: 168px; }
+.indent-8 { margin-left: 192px; }
+.indent-9 { margin-left: 216px; }
+.indent-10 { margin-left: 240px; }
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; } }

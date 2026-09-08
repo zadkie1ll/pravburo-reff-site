@@ -161,10 +161,11 @@ def build_calendar(
     return weeks
 
 
-async def mark_paid(session: AsyncSession, reward_id: int) -> bool:
+async def mark_paid(session: AsyncSession, reward_id: int) -> Reward | None:
     reward = await session.get(Reward, reward_id)
     if reward is None or reward.status != RewardStatus.APPROVED or reward.paid_at is not None:
-        return False
+        return None
     reward.paid_at = datetime.now(UTC)
     await session.commit()
-    return True
+    await session.refresh(reward)
+    return reward

@@ -1,3 +1,4 @@
+import logging
 from datetime import UTC, datetime
 from typing import Annotated
 from urllib.parse import urlencode
@@ -5,8 +6,11 @@ from urllib.parse import urlencode
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from pravburo_ref_common.database import get_session
+from pravburo_ref_common.models import Agent
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.core.email import send_payout_paid_notice
+from src.core.push import send_push_notice
 from src.core.security import csrf_token, valid_csrf
 from src.services.admin_payouts import (
     STATUS_LABELS,
@@ -17,8 +21,11 @@ from src.services.admin_payouts import (
     month_label,
     set_overdue_days,
 )
+from src.services.payouts import format_amount
 from src.web.dependencies import CurrentAdmin
 from src.web.routes.pages import templates
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/admin/payouts", tags=["admin payouts"])
 Session = Annotated[AsyncSession, Depends(get_session)]
@@ -94,7 +101,28 @@ async def payouts_mark_paid(
     csrf: Annotated[str, Form()] = "",
 ):
     if valid_csrf(request.session, csrf):
-        await mark_paid(session, reward_id)
+        reward = await mark_paid(session, reward_id)
+        if reward is not None:
+            agent = await session.get(Agent, reward.agent_id)
+            if agent is not None and agent.email:
+                try:
+                    await send_payout_paid_notice(agent.email, format_amount(reward.amount))
+                except Exception:
+                    logger.warning(
+                        "Failed to notify agent about paid reward: reward_id=%s", reward.id
+                    )
+            if agent is not None:
+                try:
+                    await send_push_notice(
+                        session,
+                        agent.id,
+                        "Выплата произведена",
+                        f"Ваша выплата на сумму {format_amount(reward.amount)} произведена.",
+                    )
+                except Exception:
+                    logger.warning(
+                        "Failed to send push about paid reward: reward_id=%s", reward.id
+                    )
     return RedirectResponse(
         f"/admin/payouts?{urlencode({'year': year, 'month': month, 'status': status})}",
         status_code=303,

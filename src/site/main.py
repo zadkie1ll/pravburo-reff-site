@@ -33,6 +33,7 @@ from src.web.routes.pages import router as pages_router
 from src.web.routes.payouts import router as payouts_router
 from src.web.routes.preview import router as preview_router
 from src.web.routes.profile import router as profile_router
+from src.web.routes.push import router as push_router
 from src.web.routes.referrals import router as referrals_router
 
 settings = get_settings()
@@ -87,6 +88,7 @@ app.include_router(onboarding_router)
 app.include_router(referrals_router)
 app.include_router(faq_router)
 app.include_router(profile_router)
+app.include_router(push_router)
 app.include_router(payouts_router)
 app.include_router(legacy_router)
 app.include_router(preview_router)

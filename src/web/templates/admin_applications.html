@@ -27,10 +27,10 @@
 <td>{{ row.application.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
 </tr>{% else %}<tr><td colspan="8">Заявки не найдены</td></tr>{% endfor %}
 </tbody></table></div></section>
-{% if page_result.total_pages > 1 %}<nav class="pagination" style="margin-top: 20px">
+{% if page_result.total_pages > 1 %}<nav class="pagination mt-20">
 {% if page_result.page > 1 %}<a href="/admin/applications?q={{ q }}&amp;status={{ status }}&amp;page={{ page_result.page - 1 }}">← Назад</a>{% endif %}
 <span>Страница {{ page_result.page }} из {{ page_result.total_pages }}</span>
 {% if page_result.page < page_result.total_pages %}<a href="/admin/applications?q={{ q }}&amp;status={{ status }}&amp;page={{ page_result.page + 1 }}">Вперёд →</a>{% endif %}
 </nav>{% endif %}
-<p style="margin-top: 20px"><a href="/admin">← Админ-панель</a></p>
+<p class="mt-20"><a href="/admin">← Админ-панель</a></p>
 {% endblock %}

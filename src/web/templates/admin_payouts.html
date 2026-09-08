@@ -31,7 +31,7 @@
 </select></label>
 <button class="button" type="submit">Показать</button>
 </form>
-<div class="footer-actions" style="margin-top: 20px">
+<div class="footer-actions mt-20">
 <a class="button secondary" href="/admin/payouts?year={{ prev_year }}&amp;month={{ prev_month }}&amp;status={{ status }}">← Предыдущий месяц</a>
 <strong>{{ month_label }}</strong>
 <a class="button secondary" href="/admin/payouts?year={{ next_year }}&amp;month={{ next_month }}&amp;status={{ status }}">Следующий месяц →</a>
@@ -63,5 +63,5 @@
 </div>
 </section>
 
-<p style="margin-top: 20px"><a href="/admin">← Админ-панель</a></p>
+<p class="mt-20"><a href="/admin">← Админ-панель</a></p>
 {% endblock %}

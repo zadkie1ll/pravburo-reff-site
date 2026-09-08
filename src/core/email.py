@@ -50,6 +50,14 @@ async def send_referral_accepted_notice(email: str, applicant_name: str) -> None
     )
 
 
+async def send_payout_paid_notice(email: str, amount_label: str) -> None:
+    await _send_email(
+        email,
+        "Выплата произведена",
+        f"Ваша выплата на сумму {amount_label} произведена.",
+    )
+
+
 async def send_admin_profile_change_notice(
     admin_emails: list[str], agent_label: str, changed_fields: list[str]
 ) -> None:

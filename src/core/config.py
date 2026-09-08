@@ -60,6 +60,9 @@ class Settings(BaseSettings):
     yandex_client_id: str = ""
     yandex_client_secret: str = ""
     yandex_redirect_uri: str = "http://localhost:8000/auth/yandex/callback"
+    vapid_public_key: str = ""
+    vapid_private_key: str = ""
+    vapid_contact_email: str = "support@prav-buro.ru"
 
     @property
     def development_routes_enabled(self) -> bool:

@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request, status
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from src.api.dependencies import LegacyGatewayDependency
@@ -21,6 +21,14 @@ async def index(request: Request, settings: SettingsDependency) -> HTMLResponse:
         name="index.html",
         context={"app_name": settings.app_name},
     )
+
+
+@router.get("/sw.js", include_in_schema=False)
+async def service_worker() -> FileResponse:
+    # Served at root (not under /static) so its default registration scope
+    # covers the whole origin, not just /static/*.
+    static_dir = Path(__file__).parents[1] / "static"
+    return FileResponse(static_dir / "sw.js", media_type="application/javascript")
 
 
 @router.get("/dev/clients/{client_id}", response_class=HTMLResponse)

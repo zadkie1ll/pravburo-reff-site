@@ -4,5 +4,5 @@
 <section class="card"><p class="eyebrow">Администратор</p><h1>Админ-панель</h1>
 <p>Настройки реферальной программы. Список будет пополняться по мере того, как появляются новые требования.</p>
 <ul class="network-matches">{% for section in sections %}<li><a href="{{ section.url }}">{{ section.title }}</a> — {{ section.description }}</li>{% endfor %}</ul>
-<form method="post" action="/logout" style="margin-top: 20px"><input type="hidden" name="csrf" value="{{ csrf_token }}"><button class="button secondary" type="submit">Выйти</button></form>
+<form method="post" action="/logout" class="mt-20"><input type="hidden" name="csrf" value="{{ csrf_token }}"><button class="button secondary" type="submit">Выйти</button></form>
 </section>{% endblock %}

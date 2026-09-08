@@ -17,6 +17,7 @@ from sqlalchemy import delete
 
 from src.main import app
 from src.web.dependencies import require_admin
+from src.web.routes import admin_payouts as admin_payouts_route
 
 FAKE_ADMIN = Agent(id=1, email="admin@example.com", role=AgentRole.ADMIN)
 
@@ -117,6 +118,45 @@ async def test_mark_paid_sets_paid_at() -> None:
         async with session_factory() as session:
             reward = await session.get(Reward, reward_id)
             assert reward.paid_at is not None
+    finally:
+        app.dependency_overrides.pop(require_admin, None)
+        await _cleanup(agent_id, application_id, reward_id)
+
+
+async def test_mark_paid_notifies_agent_by_email(monkeypatch) -> None:
+    marker = uuid.uuid4().hex[:8]
+    async with session_factory() as session:
+        agent_id, application_id, reward_id = await _make_reward(
+            session,
+            status=RewardStatus.APPROVED,
+            decided_at=datetime.now(UTC) - timedelta(days=2),
+            marker=marker,
+        )
+
+    notified: list[tuple[str, str]] = []
+
+    async def fake_notice(email: str, amount_label: str) -> None:
+        notified.append((email, amount_label))
+
+    monkeypatch.setattr(admin_payouts_route, "send_payout_paid_notice", fake_notice)
+
+    app.dependency_overrides[require_admin] = lambda: FAKE_ADMIN
+    try:
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            page = await client.get("/admin/payouts")
+            csrf = _csrf_from(page.text)
+            response = await client.post(
+                f"/admin/payouts/{reward_id}/mark-paid",
+                data={"csrf": csrf, "year": "", "month": "", "status": ""},
+                follow_redirects=False,
+            )
+            assert response.status_code == 303
+
+        async with session_factory() as session:
+            agent = await session.get(Agent, agent_id)
+        assert notified == [(agent.email, "3 000 ₽")]
     finally:
         app.dependency_overrides.pop(require_admin, None)
         await _cleanup(agent_id, application_id, reward_id)
