@@ -23,6 +23,9 @@ class PartnersPage:
     total_count: int
 
 
+STATUS_LABELS = {"active": "Активные", "blocked": "Заблокированные"}
+
+
 def _search_filter(stmt, query: str):
     pattern = f"%{query}%"
     return stmt.where(
@@ -34,13 +37,24 @@ def _search_filter(stmt, query: str):
     )
 
 
-async def list_partners(session: AsyncSession, q: str = "", page: int = 1) -> PartnersPage:
+def _status_filter(stmt, status: str):
+    if status == "active":
+        return stmt.where(Agent.is_active.is_(True))
+    if status == "blocked":
+        return stmt.where(Agent.is_active.is_(False))
+    return stmt
+
+
+async def list_partners(
+    session: AsyncSession, q: str = "", status: str = "", page: int = 1
+) -> PartnersPage:
     query = q.strip()
     page = max(page, 1)
 
     count_stmt = select(func.count(Agent.id))
     if query:
         count_stmt = _search_filter(count_stmt, query)
+    count_stmt = _status_filter(count_stmt, status)
     total_count = await session.scalar(count_stmt) or 0
     total_pages = max((total_count + PAGE_SIZE - 1) // PAGE_SIZE, 1)
     page = min(page, total_pages)
@@ -48,6 +62,7 @@ async def list_partners(session: AsyncSession, q: str = "", page: int = 1) -> Pa
     stmt = select(Agent).order_by(Agent.created_at.desc())
     if query:
         stmt = _search_filter(stmt, query)
+    stmt = _status_filter(stmt, status)
     stmt = stmt.offset((page - 1) * PAGE_SIZE).limit(PAGE_SIZE)
     agents = (await session.scalars(stmt)).all()
     if not agents:

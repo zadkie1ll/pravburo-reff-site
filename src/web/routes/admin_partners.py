@@ -8,7 +8,7 @@ from pravburo_ref_common.models import Agent, AgentRole
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.security import csrf_token, valid_csrf
-from src.services.partners import list_partners
+from src.services.partners import STATUS_LABELS, list_partners
 from src.web.dependencies import CurrentAdmin
 from src.web.routes.pages import templates
 
@@ -18,14 +18,21 @@ Session = Annotated[AsyncSession, Depends(get_session)]
 
 @router.get("", response_class=HTMLResponse)
 async def partners_page(
-    request: Request, _admin: CurrentAdmin, session: Session, q: str = "", page: int = 1
+    request: Request,
+    _admin: CurrentAdmin,
+    session: Session,
+    q: str = "",
+    status: str = "",
+    page: int = 1,
 ):
-    result = await list_partners(session, q, page)
+    result = await list_partners(session, q, status, page)
     return templates.TemplateResponse(
         request=request,
         name="admin_partners.html",
         context={
             "q": q,
+            "status": status,
+            "status_options": STATUS_LABELS,
             "page_result": result,
             "csrf_token": csrf_token(request.session),
         },
@@ -40,6 +47,7 @@ async def save_note(
     agent_id: int,
     note: Annotated[str, Form()] = "",
     q: Annotated[str, Form()] = "",
+    status: Annotated[str, Form()] = "",
     page: Annotated[int, Form()] = 1,
     csrf: Annotated[str, Form()] = "",
 ):
@@ -48,7 +56,9 @@ async def save_note(
         if agent is not None:
             agent.admin_note = note.strip() or None
             await session.commit()
-    return RedirectResponse(f"/admin/partners?{urlencode({'q': q, 'page': page})}", status_code=303)
+    return RedirectResponse(
+        f"/admin/partners?{urlencode({'q': q, 'status': status, 'page': page})}", status_code=303
+    )
 
 
 @router.post("/{agent_id}/block")
@@ -59,6 +69,7 @@ async def block_agent(
     agent_id: int,
     reason: Annotated[str, Form()] = "",
     q: Annotated[str, Form()] = "",
+    status: Annotated[str, Form()] = "",
     page: Annotated[int, Form()] = 1,
     csrf: Annotated[str, Form()] = "",
 ):
@@ -68,7 +79,9 @@ async def block_agent(
             agent.is_active = False
             agent.blocked_reason = reason.strip()
             await session.commit()
-    return RedirectResponse(f"/admin/partners?{urlencode({'q': q, 'page': page})}", status_code=303)
+    return RedirectResponse(
+        f"/admin/partners?{urlencode({'q': q, 'status': status, 'page': page})}", status_code=303
+    )
 
 
 @router.post("/{agent_id}/unblock")
@@ -78,6 +91,7 @@ async def unblock_agent(
     session: Session,
     agent_id: int,
     q: Annotated[str, Form()] = "",
+    status: Annotated[str, Form()] = "",
     page: Annotated[int, Form()] = 1,
     csrf: Annotated[str, Form()] = "",
 ):
@@ -87,4 +101,6 @@ async def unblock_agent(
             agent.is_active = True
             agent.blocked_reason = None
             await session.commit()
-    return RedirectResponse(f"/admin/partners?{urlencode({'q': q, 'page': page})}", status_code=303)
+    return RedirectResponse(
+        f"/admin/partners?{urlencode({'q': q, 'status': status, 'page': page})}", status_code=303
+    )
