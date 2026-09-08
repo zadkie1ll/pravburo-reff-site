@@ -9,7 +9,11 @@
 {% if root_agent %}
 <p class="mt-20"><a href="/admin/network/tree{% if q %}?q={{ q }}{% endif %}">← Назад к поиску</a></p>
 <h2>Дерево: {{ root_agent.display_name or root_agent.email or ('#' ~ root_agent.id) }}</h2>
-<ul class="network-tree">{% for node in tree %}<li class="indent-{{ [node.depth, 10] | min }}">{{ node.display_name or node.email or ('#' ~ node.id) }}{% if not node.is_active %} <span class="badge">неактивен</span>{% endif %} — {{ node.email or 'без почты' }}{% if node.phone_normalized %}, {{ node.phone_normalized }}{% endif %}</li>{% endfor %}</ul>
+<p class="hint">Клик по узлу сворачивает/разворачивает его ветку. Колесо мыши — масштаб, перетаскивание — панорама.</p>
+<div id="network-tree-chart" class="network-tree-chart"></div>
+<script type="application/json" id="network-tree-data">{{ tree_data_json | safe }}</script>
 {% endif %}
 <p class="mt-20"><a href="/admin">← Админ-панель</a></p>
-</section>{% endblock %}
+</section>
+{% if root_agent %}<script src="/static/vendor/d3.v7.min.js"></script><script src="/static/network-tree.js"></script>{% endif %}
+{% endblock %}

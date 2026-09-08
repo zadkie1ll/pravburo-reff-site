@@ -241,16 +241,10 @@ td form { display: grid; gap: 9px; min-width: 230px; }
 .mt-14 { margin-top: 14px; }
 .mt-20 { margin-top: 20px; }
 .inline-form { display: inline; }
-.indent-0 { margin-left: 0; }
-.indent-1 { margin-left: 24px; }
-.indent-2 { margin-left: 48px; }
-.indent-3 { margin-left: 72px; }
-.indent-4 { margin-left: 96px; }
-.indent-5 { margin-left: 120px; }
-.indent-6 { margin-left: 144px; }
-.indent-7 { margin-left: 168px; }
-.indent-8 { margin-left: 192px; }
-.indent-9 { margin-left: 216px; }
-.indent-10 { margin-left: 240px; }
+
+.hint { margin: 4px 0 16px; color: var(--muted); font-size: 14px; }
+.network-tree-chart { width: 100%; overflow-x: auto; border: 1px solid var(--line); border-radius: 16px; background: #fff; cursor: grab; }
+.network-tree-chart:active { cursor: grabbing; }
+.network-node { cursor: pointer; }
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; } }

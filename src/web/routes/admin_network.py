@@ -1,3 +1,4 @@
+import json
 from decimal import Decimal, InvalidOperation
 from typing import Annotated
 
@@ -9,7 +10,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.security import csrf_token, valid_csrf
-from src.services.network import get_descendant_tree, search_agents
+from src.services.network import (
+    build_network_tree,
+    get_descendant_tree,
+    network_tree_to_dict,
+    search_agents,
+)
 from src.web.dependencies import CurrentAdmin
 from src.web.routes.pages import templates
 
@@ -103,7 +109,15 @@ async def tree_page(
 ):
     matches = await search_agents(session, q) if q else []
     root_agent = await session.get(Agent, root) if root else None
-    tree = await get_descendant_tree(session, root) if root_agent else []
+    nodes = await get_descendant_tree(session, root) if root_agent else []
+    tree = build_network_tree(nodes)
+    # ensure_ascii=False keeps names readable in the page source; the "</"
+    # escape prevents a display_name from ever breaking out of the <script> tag.
+    tree_data_json = (
+        json.dumps(network_tree_to_dict(tree), ensure_ascii=False).replace("</", "<\\/")
+        if tree
+        else "null"
+    )
     return templates.TemplateResponse(
         request=request,
         name="admin_network_tree.html",
@@ -111,6 +125,6 @@ async def tree_page(
             "q": q,
             "matches": matches,
             "root_agent": root_agent,
-            "tree": tree,
+            "tree_data_json": tree_data_json,
         },
     )

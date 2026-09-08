@@ -1,8 +1,8 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal
 
 from pravburo_ref_common.models import Agent, Reward, RewardType
-from sqlalchemy import func, literal, or_, select
+from sqlalchemy import BigInteger, cast, func, literal, null, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
@@ -15,6 +15,13 @@ class NetworkNode:
     phone_normalized: str | None
     is_active: bool
     depth: int
+    parent_id: int | None
+
+
+@dataclass(frozen=True, slots=True)
+class NetworkTreeNode:
+    node: NetworkNode
+    children: list["NetworkTreeNode"] = field(default_factory=list)
 
 
 @dataclass(frozen=True, slots=True)
@@ -80,6 +87,7 @@ async def get_descendant_tree(session: AsyncSession, root_agent_id: int) -> list
             Agent.phone_normalized,
             Agent.is_active,
             literal(0).label("depth"),
+            cast(null(), BigInteger).label("parent_id"),
         )
         .where(Agent.id == root_agent_id)
         .cte(name="network_tree", recursive=True)
@@ -92,6 +100,7 @@ async def get_descendant_tree(session: AsyncSession, root_agent_id: int) -> list
         downline.phone_normalized,
         downline.is_active,
         (base.c.depth + 1).label("depth"),
+        base.c.id.label("parent_id"),
     ).join(base, downline.invited_by_agent_id == base.c.id)
     tree = base.union_all(recursive)
 
@@ -104,6 +113,39 @@ async def get_descendant_tree(session: AsyncSession, root_agent_id: int) -> list
             phone_normalized=row.phone_normalized,
             is_active=row.is_active,
             depth=row.depth,
+            parent_id=row.parent_id,
         )
         for row in rows
     ]
+
+
+def build_network_tree(nodes: list[NetworkNode]) -> NetworkTreeNode | None:
+    """Turn the flat (depth, parent_id) list from get_descendant_tree into an
+    actual nested structure, for rendering as a connected org-chart rather
+    than an indented list.
+    """
+    if not nodes:
+        return None
+    tree_nodes = {node.id: NetworkTreeNode(node=node) for node in nodes}
+    root: NetworkTreeNode | None = None
+    for node in nodes:
+        tree_node = tree_nodes[node.id]
+        if node.parent_id is None:
+            root = tree_node
+        elif node.parent_id in tree_nodes:
+            tree_nodes[node.parent_id].children.append(tree_node)
+    return root
+
+
+def network_tree_to_dict(tree_node: NetworkTreeNode) -> dict:
+    """JSON-serializable form for the D3 tree visualization
+    (static/network-tree.js expects this exact shape)."""
+    node = tree_node.node
+    return {
+        "id": node.id,
+        "name": node.display_name or node.email or f"#{node.id}",
+        "email": node.email,
+        "phone": node.phone_normalized,
+        "is_active": node.is_active,
+        "children": [network_tree_to_dict(child) for child in tree_node.children],
+    }

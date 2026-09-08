@@ -11,6 +11,7 @@ from src.core.email import send_reward_notice
 from src.core.internal_auth import require_internal_token
 from src.core.push import send_push_notice
 from src.core.telegram import send_partner_notice
+from src.services.deal_stages import stage_label
 from src.services.payouts import REWARD_TYPE_LABELS, format_amount
 
 logger = logging.getLogger(__name__)
@@ -32,9 +33,25 @@ async def update_deal_stage(
     application = await session.get(ReferralApplication, application_id)
     if application is None:
         raise HTTPException(status_code=404, detail="Application not found")
+
+    previous_stage_code = application.deal_stage_code
     application.bitrix_deal_id = payload.deal_id
     application.deal_stage_code = payload.stage_code
     await session.commit()
+
+    if payload.stage_code != previous_stage_code:
+        try:
+            await send_push_notice(
+                session,
+                application.agent_id,
+                "Статус дела изменился",
+                f"Ваш клиент перешёл на новый этап: {stage_label(payload.stage_code)}",
+            )
+        except Exception:
+            logger.warning(
+                "Failed to push agent about stage change: application_id=%s", application_id
+            )
+
     return {"status": "updated"}
 
 

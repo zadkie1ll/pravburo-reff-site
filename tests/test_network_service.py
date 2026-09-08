@@ -5,7 +5,74 @@ from pravburo_ref_common.database import engine, session_factory
 from pravburo_ref_common.models import Agent
 from sqlalchemy import delete
 
-from src.services.network import get_descendant_tree, search_agents
+from src.services.network import (
+    NetworkNode,
+    build_network_tree,
+    get_descendant_tree,
+    network_tree_to_dict,
+    search_agents,
+)
+
+
+def _node(id, parent_id, depth, name="Партнёр", is_active=True) -> NetworkNode:
+    return NetworkNode(
+        id=id,
+        display_name=name,
+        email=f"agent{id}@example.test",
+        phone_normalized=None,
+        is_active=is_active,
+        depth=depth,
+        parent_id=parent_id,
+    )
+
+
+def test_build_network_tree_nests_children_under_correct_parent() -> None:
+    nodes = [
+        _node(1, None, 0, "Оля"),
+        _node(2, 1, 1, "Вася"),
+        _node(3, 1, 1, "Петя"),
+        _node(4, 2, 2, "Олег"),
+    ]
+
+    tree = build_network_tree(nodes)
+
+    assert tree is not None
+    assert tree.node.id == 1
+    assert {child.node.id for child in tree.children} == {2, 3}
+    vasya = next(c for c in tree.children if c.node.id == 2)
+    assert [c.node.id for c in vasya.children] == [4]
+    petya = next(c for c in tree.children if c.node.id == 3)
+    assert petya.children == []
+
+
+def test_build_network_tree_empty_list_returns_none() -> None:
+    assert build_network_tree([]) is None
+
+
+def test_network_tree_to_dict_serializes_nested_structure() -> None:
+    tree = build_network_tree(
+        [_node(1, None, 0, "Оля"), _node(2, 1, 1, "Вася", is_active=False)]
+    )
+
+    data = network_tree_to_dict(tree)
+
+    assert data == {
+        "id": 1,
+        "name": "Оля",
+        "email": "agent1@example.test",
+        "phone": None,
+        "is_active": True,
+        "children": [
+            {
+                "id": 2,
+                "name": "Вася",
+                "email": "agent2@example.test",
+                "phone": None,
+                "is_active": False,
+                "children": [],
+            }
+        ],
+    }
 
 
 @pytest.fixture(autouse=True)
