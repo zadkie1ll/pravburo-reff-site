@@ -15,7 +15,14 @@ from pravburo_ref_common.models import EmploymentFormat
 from src.core.config import get_settings
 from src.services.network import NetworkSummary
 from src.services.onboarding import EMPLOYMENT_FORMAT_NOTES
-from src.services.payouts import REWARD_TYPE_LABELS, STATUS_LABELS, PayoutFilters, PayoutRow
+from src.services.payouts import (
+    REWARD_TYPE_LABELS,
+    STATUS_LABELS,
+    FinanceSummary,
+    PayoutFilters,
+    PayoutRow,
+    PendingGroup,
+)
 from src.services.profile import EMPLOYMENT_FORMAT_LABELS
 from src.services.referrals import ActivityStats, LinkStats
 from src.web.routes.pages import templates
@@ -248,6 +255,14 @@ async def preview_page(request: Request, page: str, token: PreviewToken) -> HTML
                 ),
                 "network_override_paid": "4 200 ₽",
                 "network_override_pending": "950 ₽",
+                "finance": FinanceSummary(
+                    total_paid_label="18 000 ₽",
+                    this_month_label="3 000 ₽",
+                    pending_total_label="10 000 ₽",
+                    pending_groups=[
+                        PendingGroup(label="Ждём выплаты", amount_label="10 000 ₽"),
+                    ],
+                ),
             },
         ),
         "success": ("referral_success.html", {}),

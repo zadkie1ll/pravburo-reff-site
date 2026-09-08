@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+from datetime import UTC, datetime
+from decimal import Decimal
 
 from pravburo_ref_common.models import ReferralApplication, Reward, RewardStatus, RewardType
 from sqlalchemy import extract, select
@@ -92,3 +94,54 @@ async def get_payout_rows(
             )
         )
     return result
+
+
+@dataclass(slots=True)
+class PendingGroup:
+    label: str
+    amount_label: str
+
+
+@dataclass(slots=True)
+class FinanceSummary:
+    total_paid_label: str
+    this_month_label: str
+    pending_total_label: str
+    pending_groups: list[PendingGroup]
+
+
+def build_finance_summary(rewards: list[Reward]) -> FinanceSummary:
+    total_paid = Decimal(0)
+    this_month = Decimal(0)
+    pending_by_slug: dict[str, Decimal] = {}
+    now = datetime.now(UTC)
+
+    for reward in rewards:
+        if reward.amount is None:
+            continue
+        if reward.paid_at is not None:
+            total_paid += reward.amount
+            if reward.paid_at.year == now.year and reward.paid_at.month == now.month:
+                this_month += reward.amount
+            continue
+        slug = payout_status_slug(reward)
+        if slug in ("pending", "scheduled"):
+            pending_by_slug[slug] = pending_by_slug.get(slug, Decimal(0)) + reward.amount
+
+    pending_labels = {
+        "pending": "Ожидает подтверждения",
+        "scheduled": "Ждём выплаты",
+    }
+    pending_groups = [
+        PendingGroup(label=pending_labels[slug], amount_label=format_amount(amount))
+        for slug, amount in pending_by_slug.items()
+        if amount
+    ]
+    pending_total = sum(pending_by_slug.values(), Decimal(0))
+
+    return FinanceSummary(
+        total_paid_label=format_amount(total_paid),
+        this_month_label=format_amount(this_month),
+        pending_total_label=format_amount(pending_total),
+        pending_groups=pending_groups,
+    )

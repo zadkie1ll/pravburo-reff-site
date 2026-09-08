@@ -22,6 +22,7 @@ from src.services.network import get_network_summary
 from src.services.payouts import (
     REWARD_TYPE_LABELS,
     STATUS_LABELS,
+    build_finance_summary,
     format_amount,
     payout_status_slug,
 )
@@ -55,13 +56,15 @@ async def cabinet(request: Request, agent: CurrentAgent, session: Session):
             )
         ).all()
     )
+    all_rewards = (await session.scalars(select(Reward).where(Reward.agent_id == agent.id))).all()
     rewards_by_application: dict[int, list[Reward]] = defaultdict(list)
-    for reward in (await session.scalars(select(Reward).where(Reward.agent_id == agent.id))).all():
+    for reward in all_rewards:
         rewards_by_application[reward.application_id].append(reward)
     settings = get_settings()
     stats = await get_link_stats(session, agent.id)
     activity = get_activity_stats([item.id for item in applications], rewards_by_application)
     network_summary = await get_network_summary(session, agent.id)
+    finance = build_finance_summary(list(all_rewards))
     rows = [
         {
             "application": item,
@@ -89,6 +92,7 @@ async def cabinet(request: Request, agent: CurrentAgent, session: Session):
             "network_summary": network_summary,
             "network_override_paid": format_amount(network_summary.override_paid),
             "network_override_pending": format_amount(network_summary.override_pending),
+            "finance": finance,
             "csrf_token": csrf_token(request.session),
         },
     )

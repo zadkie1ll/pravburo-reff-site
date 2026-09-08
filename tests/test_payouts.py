@@ -7,11 +7,16 @@ from pravburo_ref_common.models import RewardStatus, RewardType
 
 from src.core.payout_pdf import build_payouts_pdf
 from src.main import app
-from src.services.payouts import PayoutRow, format_amount, payout_status_slug
+from src.services.payouts import (
+    PayoutRow,
+    build_finance_summary,
+    format_amount,
+    payout_status_slug,
+)
 
 
 def _reward(**overrides) -> SimpleNamespace:
-    defaults = dict(status=RewardStatus.PENDING, paid_at=None)
+    defaults = dict(status=RewardStatus.PENDING, paid_at=None, amount=None)
     defaults.update(overrides)
     return SimpleNamespace(**defaults)
 
@@ -31,6 +36,35 @@ def test_payout_status_slug_approved_unpaid_is_scheduled() -> None:
 def test_payout_status_slug_approved_paid_is_paid() -> None:
     reward = _reward(status=RewardStatus.APPROVED, paid_at=datetime(2026, 1, 1, tzinfo=UTC))
     assert payout_status_slug(reward) == "paid"
+
+
+def test_finance_summary_sums_paid_and_pending_by_status() -> None:
+    summary = build_finance_summary(
+        [
+            _reward(
+                status=RewardStatus.APPROVED,
+                paid_at=datetime.now(UTC),
+                amount=Decimal("5000.00"),
+            ),
+            _reward(status=RewardStatus.PENDING, amount=Decimal("3000.00")),
+            _reward(status=RewardStatus.APPROVED, paid_at=None, amount=Decimal("10000.00")),
+            _reward(status=RewardStatus.REJECTED, amount=Decimal("1000.00")),
+        ]
+    )
+    assert summary.total_paid_label == "5 000 ₽"
+    assert summary.this_month_label == "5 000 ₽"
+    assert summary.pending_total_label == "13 000 ₽"
+    assert {g.label: g.amount_label for g in summary.pending_groups} == {
+        "Ожидает подтверждения": "3 000 ₽",
+        "Ждём выплаты": "10 000 ₽",
+    }
+
+
+def test_finance_summary_ignores_rewards_without_amount() -> None:
+    summary = build_finance_summary([_reward(status=RewardStatus.PENDING, amount=None)])
+    assert summary.total_paid_label == "0 ₽"
+    assert summary.pending_total_label == "0 ₽"
+    assert summary.pending_groups == []
 
 
 def test_format_amount_none() -> None:
