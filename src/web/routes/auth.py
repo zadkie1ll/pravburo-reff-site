@@ -1,3 +1,4 @@
+import logging
 import secrets
 from typing import Annotated
 
@@ -23,11 +24,13 @@ from src.core.security import (
     valid_email,
     verify_telegram_login,
 )
+from src.core.telegram import send_new_partner_notice
 from src.services.onboarding import needs_onboarding
 from src.services.protection import login_rate_limiter
 from src.services.social_auth import fetch_yandex_profile, login_social_agent, yandex_authorize_url
 from src.web.routes.pages import templates
 
+logger = logging.getLogger(__name__)
 router = APIRouter(tags=["authentication"])
 Session = Annotated[AsyncSession, Depends(get_session)]
 
@@ -183,6 +186,14 @@ async def register_confirm(
             agent = await confirm_registration(
                 session, request.session.get("registration_token", ""), code
             )
+            if agent.role == AgentRole.AGENT:
+                try:
+                    await send_new_partner_notice(agent)
+                except Exception:
+                    logger.warning(
+                        "Failed to notify Telegram chats about new partner: agent_id=%s",
+                        agent.id,
+                    )
             request.session.clear()
             return _log_in(request, agent)
         except ValueError as exc:

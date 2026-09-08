@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.config import get_settings
 from src.core.email import send_admin_profile_change_notice
 from src.core.security import csrf_token, valid_csrf
+from src.core.telegram import send_payout_details_changed_notice
 from src.services.profile import EMPLOYMENT_FORMAT_LABELS, ProfileInput, update_profile
 from src.web.dependencies import CurrentAgent
 from src.web.routes.pages import templates
@@ -80,6 +81,14 @@ async def profile_update(
             except Exception:
                 logger.warning(
                     "Failed to notify admins about profile change: agent_id=%s", agent.id
+                )
+        if "реквизиты для выплат" in changed_fields:
+            try:
+                await send_payout_details_changed_notice(agent)
+            except Exception:
+                logger.warning(
+                    "Failed to notify Telegram chats about payout details change: agent_id=%s",
+                    agent.id,
                 )
 
     context = _context(agent, info="Профиль обновлён")

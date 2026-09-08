@@ -13,6 +13,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from src.api.v1.routes import router as api_v1_router
 from src.core.config import get_settings
 from src.core.logging import configure_logging
+from src.core.scheduler import create_scheduler
 from src.core.security_headers import SecurityHeadersMiddleware
 from src.integrations.legacy_lk.database import close_legacy_database
 from src.site.legacy_routes import router as legacy_router
@@ -41,7 +42,10 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     logger.info("Site service starting: environment=%s", settings.app_env)
+    scheduler = create_scheduler()
+    scheduler.start()
     yield
+    scheduler.shutdown()
     await close_database()
     await close_legacy_database()
 

@@ -1,5 +1,7 @@
+from datetime import date
+
 import httpx
-from pravburo_ref_common.models import Agent, DeliveryStatus, ReferralApplication
+from pravburo_ref_common.models import Agent, DeliveryStatus, ReferralApplication, Reward
 
 from src.core.config import get_settings
 
@@ -41,18 +43,13 @@ def build_new_referral_message(
     return "\n".join(lines)
 
 
-async def send_new_referral_notice(agent: Agent, application: ReferralApplication) -> None:
+async def _send_admin_notice(message: str) -> None:
     settings = get_settings()
     token = settings.telegram_notification_bot_token
     chat_ids = settings.telegram_notification_chat_id_list
     if not token or not chat_ids:
         return
 
-    message = build_new_referral_message(
-        agent,
-        application,
-        settings.bitrix_lead_url_template,
-    )
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     async with httpx.AsyncClient(timeout=10) as client:
         for chat_id in chat_ids:
@@ -72,3 +69,81 @@ async def send_new_referral_notice(agent: Agent, application: ReferralApplicatio
                 raise TelegramNotificationError(
                     f"Telegram rejected notification for chat_id={chat_id}"
                 )
+
+
+async def send_new_referral_notice(agent: Agent, application: ReferralApplication) -> None:
+    settings = get_settings()
+    message = build_new_referral_message(agent, application, settings.bitrix_lead_url_template)
+    await _send_admin_notice(message)
+
+
+def build_new_partner_message(agent: Agent) -> str:
+    return "\n".join(
+        [
+            "Новый партнёр зарегистрировался",
+            f"Партнёр: {_value_or_dash(agent.display_name)} (#{agent.id})",
+            f"Почта: {_value_or_dash(agent.email)}",
+            f"Телефон: {_value_or_dash(agent.phone_normalized)}",
+        ]
+    )
+
+
+async def send_new_partner_notice(agent: Agent) -> None:
+    await _send_admin_notice(build_new_partner_message(agent))
+
+
+def build_payout_details_changed_message(agent: Agent) -> str:
+    return "\n".join(
+        [
+            "Партнёр изменил реквизиты для выплат",
+            f"Партнёр: {_value_or_dash(agent.display_name)} (#{agent.id})",
+            f"Почта: {_value_or_dash(agent.email)}",
+            "Нужна проверка перед следующей выплатой",
+        ]
+    )
+
+
+async def send_payout_details_changed_notice(agent: Agent) -> None:
+    await _send_admin_notice(build_payout_details_changed_message(agent))
+
+
+def build_payout_due_message(
+    reward: Reward, agent: Agent, client_name: str, target_date: date
+) -> str:
+    return "\n".join(
+        [
+            "Наступила дата запланированной выплаты",
+            f"Партнёр: {_value_or_dash(agent.display_name)} (#{agent.id})",
+            f"Клиент: {client_name}",
+            f"Сумма: {reward.amount}",
+            f"Плановая дата: {target_date.isoformat()}",
+        ]
+    )
+
+
+async def send_payout_due_notice(
+    reward: Reward, agent: Agent, client_name: str, target_date: date
+) -> None:
+    await _send_admin_notice(build_payout_due_message(reward, agent, client_name, target_date))
+
+
+def build_payout_overdue_message(
+    reward: Reward, agent: Agent, client_name: str, target_date: date, days_overdue: int
+) -> str:
+    return "\n".join(
+        [
+            f"Выплата просрочена на {days_overdue} дн.",
+            f"Партнёр: {_value_or_dash(agent.display_name)} (#{agent.id})",
+            f"Клиент: {client_name}",
+            f"Сумма: {reward.amount}",
+            f"Плановая дата: {target_date.isoformat()}",
+        ]
+    )
+
+
+async def send_payout_overdue_notice(
+    reward: Reward, agent: Agent, client_name: str, target_date: date, days_overdue: int
+) -> None:
+    await _send_admin_notice(
+        build_payout_overdue_message(reward, agent, client_name, target_date, days_overdue)
+    )
