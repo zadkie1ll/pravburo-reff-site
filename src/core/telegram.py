@@ -1,7 +1,9 @@
 from datetime import date
 
 import httpx
-from pravburo_ref_common.models import Agent, DeliveryStatus, ReferralApplication, Reward
+from pravburo_ref_common.models import Agent, AgentIdentity, DeliveryStatus, ReferralApplication, Reward
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config import get_settings
 
@@ -43,32 +45,54 @@ def build_new_referral_message(
     return "\n".join(lines)
 
 
+async def _send_message(token: str, chat_id: str, message: str) -> None:
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    async with httpx.AsyncClient(timeout=10) as client:
+        response = await client.post(
+            url,
+            json={
+                "chat_id": chat_id,
+                "text": message,
+                "disable_web_page_preview": True,
+            },
+        )
+    try:
+        payload = response.json()
+    except ValueError:
+        payload = {}
+    if response.is_error or payload.get("ok") is not True:
+        raise TelegramNotificationError(f"Telegram rejected notification for chat_id={chat_id}")
+
+
 async def _send_admin_notice(message: str) -> None:
     settings = get_settings()
     token = settings.telegram_notification_bot_token
     chat_ids = settings.telegram_notification_chat_id_list
     if not token or not chat_ids:
         return
+    for chat_id in chat_ids:
+        await _send_message(token, chat_id, message)
 
-    url = f"https://api.telegram.org/bot{token}/sendMessage"
-    async with httpx.AsyncClient(timeout=10) as client:
-        for chat_id in chat_ids:
-            response = await client.post(
-                url,
-                json={
-                    "chat_id": chat_id,
-                    "text": message,
-                    "disable_web_page_preview": True,
-                },
-            )
-            try:
-                payload = response.json()
-            except ValueError:
-                payload = {}
-            if response.is_error or payload.get("ok") is not True:
-                raise TelegramNotificationError(
-                    f"Telegram rejected notification for chat_id={chat_id}"
-                )
+
+async def send_partner_notice(session: AsyncSession, agent_id: int, message: str) -> None:
+    """Send via the partner-facing bot (TELEGRAM_BOT_TOKEN) - only works for
+    an agent who logged in with the Telegram widget (data-request-access=
+    "write"), which stores their chat id as an AgentIdentity(provider=
+    "telegram"). Silently does nothing if the bot isn't configured or the
+    agent never linked Telegram - this is an opt-in channel, not guaranteed.
+    """
+    settings = get_settings()
+    token = settings.telegram_bot_token
+    if not token:
+        return
+    chat_id = await session.scalar(
+        select(AgentIdentity.subject).where(
+            AgentIdentity.agent_id == agent_id, AgentIdentity.provider == "telegram"
+        )
+    )
+    if not chat_id:
+        return
+    await _send_message(token, chat_id, message)
 
 
 async def send_new_referral_notice(agent: Agent, application: ReferralApplication) -> None:

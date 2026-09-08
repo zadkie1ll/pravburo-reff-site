@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.core.email import send_payout_paid_notice
 from src.core.push import send_push_notice
 from src.core.security import csrf_token, valid_csrf
+from src.core.telegram import send_partner_notice
 from src.services.admin_payouts import (
     STATUS_LABELS,
     build_calendar,
@@ -122,6 +123,17 @@ async def payouts_mark_paid(
                 except Exception:
                     logger.warning(
                         "Failed to send push about paid reward: reward_id=%s", reward.id
+                    )
+                try:
+                    await send_partner_notice(
+                        session,
+                        agent.id,
+                        f"Ваша выплата на сумму {format_amount(reward.amount)} произведена.",
+                    )
+                except Exception:
+                    logger.warning(
+                        "Failed to send Telegram notice about paid reward: reward_id=%s",
+                        reward.id,
                     )
     return RedirectResponse(
         f"/admin/payouts?{urlencode({'year': year, 'month': month, 'status': status})}",

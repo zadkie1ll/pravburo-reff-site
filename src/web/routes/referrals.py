@@ -16,7 +16,7 @@ from src.core.config import get_settings
 from src.core.email import send_referral_accepted_notice
 from src.core.push import send_push_notice
 from src.core.security import csrf_token, masked_phone
-from src.core.telegram import send_new_referral_notice
+from src.core.telegram import send_new_referral_notice, send_partner_notice
 from src.services.deal_stages import stage_label
 from src.services.network import get_network_summary
 from src.services.payouts import (
@@ -212,6 +212,18 @@ async def submit_referral(
             )
         except Exception:
             logger.warning("Failed to send push about accepted referral: agent_id=%s", agent.id)
+    if created:
+        try:
+            await send_partner_notice(
+                session,
+                agent.id,
+                f"Заявка на консультацию от {application.full_name} по вашей рекомендации "
+                "принята, мы уже связываемся с ним.",
+            )
+        except Exception:
+            logger.warning(
+                "Failed to send Telegram notice about accepted referral: agent_id=%s", agent.id
+            )
     if created:
         try:
             await send_new_referral_notice(agent, application)

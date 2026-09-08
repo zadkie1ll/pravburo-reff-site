@@ -58,6 +58,14 @@ async def send_payout_paid_notice(email: str, amount_label: str) -> None:
     )
 
 
+async def send_reward_notice(email: str, type_label: str, amount_label: str) -> None:
+    await _send_email(
+        email,
+        f"Начислено вознаграждение: {type_label}",
+        f"Вам начислено вознаграждение «{type_label}» на сумму {amount_label}.",
+    )
+
+
 async def send_admin_profile_change_notice(
     admin_emails: list[str], agent_label: str, changed_fields: list[str]
 ) -> None:
