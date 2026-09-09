@@ -40,16 +40,18 @@ async def update_deal_stage(
     await session.commit()
 
     if payload.stage_code != previous_stage_code:
+        message = f"Ваш клиент перешёл на новый этап: {stage_label(payload.stage_code)}"
         try:
-            await send_push_notice(
-                session,
-                application.agent_id,
-                "Статус дела изменился",
-                f"Ваш клиент перешёл на новый этап: {stage_label(payload.stage_code)}",
-            )
+            await send_push_notice(session, application.agent_id, "Статус дела изменился", message)
         except Exception:
             logger.warning(
                 "Failed to push agent about stage change: application_id=%s", application_id
+            )
+        try:
+            await send_partner_notice(session, application.agent_id, message)
+        except Exception:
+            logger.warning(
+                "Failed to Telegram agent about stage change: application_id=%s", application_id
             )
 
     return {"status": "updated"}

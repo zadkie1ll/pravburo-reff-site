@@ -149,3 +149,41 @@ async def test_update_deal_stage_pushes_only_on_actual_change(monkeypatch) -> No
             )
             await session.execute(delete(Agent).where(Agent.id == agent_id))
             await session.commit()
+
+
+async def test_update_deal_stage_sends_telegram_notice(monkeypatch) -> None:
+    settings = get_settings()
+    monkeypatch.setattr(settings, "internal_service_token", "test-token")
+
+    notified: list[tuple] = []
+
+    async def fake_partner_notice(session, agent_id, message):
+        notified.append((agent_id, message))
+
+    monkeypatch.setattr(internal_route, "send_partner_notice", fake_partner_notice)
+
+    async with session_factory() as session:
+        agent_id, application_id = await _make_application(session)
+
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post(
+                f"/internal/applications/{application_id}/stage",
+                headers={"X-Internal-Token": "test-token"},
+                json={
+                    "application_id": application_id,
+                    "deal_id": "555",
+                    "stage_code": "C10:LOSE",
+                },
+            )
+            assert response.status_code == 200
+            assert len(notified) == 1
+            assert notified[0][0] == agent_id
+            assert "довести дело до конца не получилось" in notified[0][1]
+    finally:
+        async with session_factory() as session:
+            await session.execute(
+                delete(ReferralApplication).where(ReferralApplication.id == application_id)
+            )
+            await session.execute(delete(Agent).where(Agent.id == agent_id))
+            await session.commit()
