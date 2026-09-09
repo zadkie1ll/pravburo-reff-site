@@ -9,5 +9,5 @@ services:
     # Keep the workaround scoped to this container instead of changing host DNS.
     extra_hosts:
       - "api.telegram.org:149.154.167.220"
-    command: ["uv", "run", "--no-sync", "uvicorn", "src.site.main:app", "--host", "127.0.0.1", "--port", "${SITE_PORT:-8040}"]
+    command: ["uv", "run", "--no-sync", "uvicorn", "src.site.main:app", "--host", "127.0.0.1", "--port", "${SITE_PORT:-8040}", "--proxy-headers", "--forwarded-allow-ips=127.0.0.1"]
     restart: unless-stopped
