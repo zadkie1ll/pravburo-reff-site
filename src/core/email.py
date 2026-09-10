@@ -17,12 +17,11 @@ def _render_html(heading: str, paragraphs: list[str], code: str | None = None) -
     )
     code_html = ""
     if code:
-        spaced = " ".join(code)
         code_html = f"""
-          <div style="margin:4px 0 24px;padding:16px 24px;background:#eef4fd;border-radius:14px;
-                      text-align:center;font-size:32px;font-weight:700;letter-spacing:.15em;
-                      color:#2582dc;font-family:'SF Mono',Consolas,monospace;">
-            {spaced}
+          <div style="margin:4px 0 24px;padding:16px 24px 16px 24px;background:#eef4fd;
+                      border-radius:14px;text-align:center;font-size:32px;font-weight:700;
+                      letter-spacing:.4em;color:#2582dc;font-family:'SF Mono',Consolas,monospace;">
+            <span style="padding-left:.4em;">{code}</span>
           </div>
         """
     return f"""\
