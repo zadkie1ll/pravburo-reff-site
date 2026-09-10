@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 REWARD_TYPE_LABELS = {
     RewardType.ADVANCE: "Аванс",
     RewardType.MAIN: "Основная выплата",
+    RewardType.OVERRIDE: "Бонус за сеть",
     RewardType.BONUS_FULL_PAYMENT: "Бонус за 100% оплату",
     RewardType.QUARTERLY_BONUS: "Квартальный бонус",
 }
