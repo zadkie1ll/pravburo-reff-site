@@ -7,8 +7,73 @@ from src.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
+LOGO_URL = "https://agents.prav-buro.ru/static/img/logo.svg"
 
-async def _send_email(to: str, subject: str, body: str) -> None:
+
+def _render_html(heading: str, paragraphs: list[str], code: str | None = None) -> str:
+    body_html = "".join(
+        f'<p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#33475c;">{p}</p>'
+        for p in paragraphs
+    )
+    code_html = ""
+    if code:
+        spaced = " ".join(code)
+        code_html = f"""
+          <div style="margin:4px 0 24px;padding:16px 24px;background:#eef4fd;border-radius:14px;
+                      text-align:center;font-size:32px;font-weight:700;letter-spacing:.15em;
+                      color:#2582dc;font-family:'SF Mono',Consolas,monospace;">
+            {spaced}
+          </div>
+        """
+    return f"""\
+<!doctype html>
+<html>
+  <body style="margin:0;padding:24px;background:#f4f7fb;
+               font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0"
+                 style="max-width:480px;background:#ffffff;border-radius:20px;padding:32px;">
+            <tr>
+              <td align="center" style="padding-bottom:24px;">
+                <img src="{LOGO_URL}" width="48" height="48" alt="Правбюро" style="display:block;">
+                <div style="margin-top:8px;font-size:13px;color:#8a97a8;letter-spacing:.02em;">
+                  Агентская программа
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td style="font-size:20px;font-weight:600;color:#33475c;padding-bottom:12px;">
+                {heading}
+              </td>
+            </tr>
+            <tr>
+              <td>
+                {code_html}
+                {body_html}
+              </td>
+            </tr>
+          </table>
+          <div style="max-width:480px;margin-top:16px;font-size:12px;color:#a3adba;">
+            © Правбюро
+          </div>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>
+"""
+
+
+async def _send_email(
+    to: str,
+    subject: str,
+    body: str,
+    *,
+    heading: str | None = None,
+    code: str | None = None,
+) -> None:
     settings = get_settings()
     if not settings.smtp_host:
         if settings.app_env == "production":
@@ -21,6 +86,10 @@ async def _send_email(to: str, subject: str, body: str) -> None:
     message["To"] = to
     message["Subject"] = subject
     message.set_content(body)
+    paragraphs = [line for line in body.split("\n") if line.strip()]
+    message.add_alternative(
+        _render_html(heading or subject, paragraphs, code=code), subtype="html"
+    )
 
     def deliver() -> None:
         with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=15) as smtp:
@@ -38,6 +107,8 @@ async def send_code(email: str, code: str, purpose: str) -> None:
         email,
         "Код подтверждения Правбюро",
         f"Код для операции «{purpose}»: {code}\nКод действует ограниченное время.",
+        heading=f"Код для операции «{purpose}»",
+        code=code,
     )
 
 
