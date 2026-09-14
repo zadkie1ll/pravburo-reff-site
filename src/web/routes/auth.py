@@ -1,11 +1,12 @@
 import logging
 import secrets
 from typing import Annotated
+from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from pravburo_ref_common.database import get_session
-from pravburo_ref_common.models import AgentRole
+from pravburo_ref_common.models import Agent, AgentRole
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.auth import (
@@ -26,7 +27,13 @@ from src.core.security import (
 )
 from src.core.telegram import send_new_partner_notice
 from src.services.protection import login_rate_limiter
-from src.services.social_auth import fetch_yandex_profile, login_social_agent, yandex_authorize_url
+from src.services.social_auth import (
+    fetch_yandex_profile,
+    link_social_identity,
+    login_social_agent,
+    yandex_authorize_url,
+)
+from src.web.dependencies import OptionalAgent
 from src.web.routes.pages import templates
 
 logger = logging.getLogger(__name__)
@@ -203,31 +210,37 @@ async def register_confirm(
 
 
 @router.get("/password/reset", response_class=HTMLResponse)
-async def reset_page(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse(
-        request=request, name="password_reset.html", context=context(request)
-    )
+async def reset_page(request: Request, agent: OptionalAgent) -> HTMLResponse:
+    ctx = context(request)
+    ctx["is_change"] = agent is not None
+    ctx["agent_email"] = agent.email if agent else ""
+    return templates.TemplateResponse(request=request, name="password_reset.html", context=ctx)
 
 
 @router.post("/password/reset")
 async def reset_begin(
     request: Request,
     session: Session,
+    agent: OptionalAgent,
     email: Annotated[str, Form()],
     csrf: Annotated[str, Form()] = "",
 ):
     if not valid_csrf(request.session, csrf):
+        ctx = context(request, error="Обновите страницу")
+        ctx["is_change"] = agent is not None
+        ctx["agent_email"] = agent.email if agent else ""
         return templates.TemplateResponse(
             request=request,
             name="password_reset.html",
-            context=context(request, error="Обновите страницу"),
+            context=ctx,
             status_code=400,
         )
     request.session.pop("reset_token", None)
     pending = await begin_password_reset(session, email)
     if pending:
         request.session["reset_token"] = pending[0].token
-        await send_code(pending[0].email, pending[1], "восстановление пароля")
+        purpose = "смена пароля" if agent is not None else "восстановление пароля"
+        await send_code(pending[0].email, pending[1], purpose)
     return templates.TemplateResponse(
         request=request,
         name="password_reset_confirm.html",
@@ -294,21 +307,45 @@ async def telegram_callback(request: Request, session: Session):
 
 
 @router.get("/auth/yandex/start")
-async def yandex_start(request: Request):
+async def yandex_start(request: Request, agent: OptionalAgent):
     if not get_settings().yandex_client_id:
         return RedirectResponse("/login", status_code=303)
     state = secrets.token_urlsafe(32)
     request.session["yandex_state"] = state
+    if agent is not None:
+        request.session["yandex_link_agent_id"] = agent.id
     return RedirectResponse(yandex_authorize_url(state), status_code=303)
 
 
 @router.get("/auth/yandex/callback")
 async def yandex_callback(request: Request, session: Session, code: str = "", state: str = ""):
     expected = request.session.pop("yandex_state", "")
+    link_agent_id = request.session.pop("yandex_link_agent_id", None)
     if not expected or not secrets.compare_digest(expected, state) or not code:
         return RedirectResponse("/login", status_code=303)
     try:
         profile = await fetch_yandex_profile(code)
+    except Exception:
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context=context(request, error="Не удалось войти через Яндекс"),
+            status_code=400,
+        )
+    if link_agent_id is not None:
+        agent = await session.get(Agent, link_agent_id)
+        if agent is None or request.session.get("agent_id") != link_agent_id:
+            return RedirectResponse("/profile", status_code=303)
+        try:
+            await link_social_identity(session, agent, "yandex", str(profile["id"]))
+        except ValueError as exc:
+            return RedirectResponse(
+                f"/profile?{urlencode({'error': str(exc)})}", status_code=303
+            )
+        return RedirectResponse(
+            f"/profile?{urlencode({'info': 'Яндекс привязан'})}", status_code=303
+        )
+    try:
         agent = await login_social_agent(
             session,
             "yandex",

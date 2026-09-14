@@ -18,5 +18,23 @@
 <label>Формат сотрудничества<select name="employment_format" required>{% for value, label in employment_formats.items() %}<option value="{{ value.value }}" {% if agent.employment_format == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
 <label>Реквизиты для выплат<input name="payout_details" maxlength="200" value="{{ agent.payout_details or '' }}" placeholder="Номер карты или расчётный счёт"></label>
 <label>ИНН<input name="inn" maxlength="12" value="{{ agent.inn or '' }}" placeholder="10 или 12 цифр, для самозанятых и ИП"></label>
-<button class="button" type="submit">Сохранить</button></form></section></div>
+<button class="button" type="submit">Сохранить</button></form></section>
+<section class="card"><h2>Аккаунт</h2>
+{% if pending_email %}
+<p>Код отправлен на <strong>{{ pending_email }}</strong>. Введите его, чтобы подтвердить смену почты.</p>
+<form class="lead-form" method="post" action="/profile/email/confirm"><input type="hidden" name="csrf" value="{{ csrf_token }}">
+<label>Код из письма<input name="code" maxlength="6" required autofocus></label>
+<button class="button" type="submit">Подтвердить почту</button></form>
+{% else %}
+<p>Текущая почта: <strong>{{ agent.email or 'Не указана' }}</strong></p>
+<form class="lead-form" method="post" action="/profile/email"><input type="hidden" name="csrf" value="{{ csrf_token }}">
+<label>Новая почта<input type="email" name="new_email" maxlength="254" required></label>
+<label>Текущий пароль<input type="password" name="current_password" required></label>
+<button class="button" type="submit">Сменить почту</button></form>
+{% endif %}
+<p class="back-link"><a href="/password/reset">Изменить пароль →</a></p>
+{% if yandex_enabled %}
+<p class="back-link">{% if yandex_linked %}Яндекс привязан{% else %}<a href="/auth/yandex/start">Привязать Яндекс →</a>{% endif %}</p>
+{% endif %}
+</section></div>
 <p class="back-link">{% if agent.role.value == 'admin' %}<a href="/admin">Админ-панель</a> · {% endif %}<a href="/cabinet">← Вернуться в кабинет</a></p>{% endblock %}

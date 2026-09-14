@@ -3,6 +3,7 @@ from urllib.parse import urlencode
 import httpx
 from pravburo_ref_common.models import Agent, AgentIdentity
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config import get_settings
@@ -75,3 +76,27 @@ async def login_social_agent(
     await session.commit()
     await session.refresh(agent)
     return agent
+
+
+async def link_social_identity(
+    session: AsyncSession, agent: Agent, provider: str, subject: str
+) -> None:
+    """Attach a social identity to an already logged-in account, without the
+    login-or-create fallback `login_social_agent` does - a mismatch here
+    should never silently switch the caller to a different account.
+    """
+    existing = await session.scalar(
+        select(AgentIdentity).where(
+            AgentIdentity.provider == provider, AgentIdentity.subject == subject
+        )
+    )
+    if existing is not None:
+        if existing.agent_id == agent.id:
+            return
+        raise ValueError("Этот аккаунт уже привязан к другому пользователю")
+    session.add(AgentIdentity(agent_id=agent.id, provider=provider, subject=subject))
+    try:
+        await session.commit()
+    except IntegrityError:
+        await session.rollback()
+        raise ValueError("Этот аккаунт уже привязан к другому пользователю") from None

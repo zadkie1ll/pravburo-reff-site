@@ -7,6 +7,7 @@ import pytest
 from pravburo_ref_common.database import get_session
 from pravburo_ref_common.models import AgentRole, EmploymentFormat
 
+from src.core.security import hash_password
 from src.main import app
 from src.web.dependencies import require_agent
 from src.web.routes import profile as profile_route
@@ -34,10 +35,24 @@ class _NoOpSession:
     async def commit(self) -> None:
         return None
 
-
-class _ScalarNoneSession(_NoOpSession):
     async def scalar(self, *args, **kwargs) -> None:
         return None
+
+
+class _ScalarNoneSession(_NoOpSession):
+    pass
+
+
+class _EmailChangeSession(_NoOpSession):
+    def __init__(self, password_hash: str, email_taken: bool = False):
+        self._password_hash = password_hash
+        self._email_taken = email_taken
+
+    async def get(self, model, pk):
+        return SimpleNamespace(password_hash=self._password_hash)
+
+    async def scalar(self, *args, **kwargs):
+        return 1 if self._email_taken else None
 
 
 @pytest.fixture(autouse=True)
@@ -207,3 +222,146 @@ def test_profile_update_individual_does_not_require_inn(client) -> None:
 
     assert response.status_code == 200
     assert agent.inn is None
+
+
+def _login_with_session(agent, session) -> None:
+    app.dependency_overrides[require_agent] = lambda: agent
+
+    async def _get_session():
+        yield session
+
+    app.dependency_overrides[get_session] = _get_session
+
+
+def test_profile_email_begin_rejects_wrong_password(client, monkeypatch) -> None:
+    agent = _fake_agent()
+    _login_with_session(agent, _EmailChangeSession(hash_password("correct-horse")))
+    csrf = _csrf_token(client)
+    send_code = AsyncMock()
+    monkeypatch.setattr(profile_route, "send_code", send_code)
+
+    response = client.post(
+        "/profile/email",
+        data={
+            "new_email": "new@example.com",
+            "current_password": "wrong-password",
+            "csrf": csrf,
+        },
+    )
+
+    assert response.status_code == 400
+    assert "Неверный пароль" in response.text
+    send_code.assert_not_awaited()
+
+
+def test_profile_email_begin_rejects_taken_email(client, monkeypatch) -> None:
+    agent = _fake_agent()
+    _login_with_session(
+        agent, _EmailChangeSession(hash_password("correct-horse"), email_taken=True)
+    )
+    csrf = _csrf_token(client)
+    send_code = AsyncMock()
+    monkeypatch.setattr(profile_route, "send_code", send_code)
+
+    response = client.post(
+        "/profile/email",
+        data={
+            "new_email": "new@example.com",
+            "current_password": "correct-horse",
+            "csrf": csrf,
+        },
+    )
+
+    assert response.status_code == 400
+    assert "уже используется другим аккаунтом" in response.text
+    send_code.assert_not_awaited()
+
+
+def test_profile_email_change_full_flow(client, monkeypatch) -> None:
+    agent = _fake_agent()
+    _login_with_session(agent, _EmailChangeSession(hash_password("correct-horse")))
+    csrf = _csrf_token(client)
+    send_code = AsyncMock()
+    monkeypatch.setattr(profile_route, "send_code", send_code)
+
+    begin_response = client.post(
+        "/profile/email",
+        data={
+            "new_email": "new@example.com",
+            "current_password": "correct-horse",
+            "csrf": csrf,
+        },
+    )
+
+    assert begin_response.status_code == 200
+    assert "Код отправлен на новую почту" in begin_response.text
+    send_code.assert_awaited_once()
+    sent_email, sent_code, purpose = send_code.await_args.args
+    assert sent_email == "new@example.com"
+    assert purpose == "смена почты"
+
+    confirm_csrf = _csrf_token(client)
+    confirm_response = client.post(
+        "/profile/email/confirm",
+        data={"code": sent_code, "csrf": confirm_csrf},
+    )
+
+    assert confirm_response.status_code == 200
+    assert "Почта изменена" in confirm_response.text
+    assert agent.email == "new@example.com"
+
+
+def test_profile_email_confirm_rejects_wrong_code(client, monkeypatch) -> None:
+    agent = _fake_agent()
+    _login_with_session(agent, _EmailChangeSession(hash_password("correct-horse")))
+    csrf = _csrf_token(client)
+    monkeypatch.setattr(profile_route, "send_code", AsyncMock())
+
+    client.post(
+        "/profile/email",
+        data={
+            "new_email": "new@example.com",
+            "current_password": "correct-horse",
+            "csrf": csrf,
+        },
+    )
+    confirm_csrf = _csrf_token(client)
+
+    response = client.post(
+        "/profile/email/confirm",
+        data={"code": "000000", "csrf": confirm_csrf},
+    )
+
+    assert response.status_code == 400
+    assert "Неверный код" in response.text
+    assert agent.email == "agent@example.com"
+
+
+def test_profile_email_confirm_rejects_expired_code(client, monkeypatch) -> None:
+    agent = _fake_agent()
+    session_obj = _EmailChangeSession(hash_password("correct-horse"))
+    _login_with_session(agent, session_obj)
+    csrf = _csrf_token(client)
+    send_code = AsyncMock()
+    monkeypatch.setattr(profile_route, "send_code", send_code)
+    monkeypatch.setattr(profile_route, "EMAIL_CHANGE_CODE_TTL_SECONDS", -1)
+
+    client.post(
+        "/profile/email",
+        data={
+            "new_email": "new@example.com",
+            "current_password": "correct-horse",
+            "csrf": csrf,
+        },
+    )
+    sent_code = send_code.await_args.args[1]
+
+    confirm_csrf = _csrf_token(client)
+    response = client.post(
+        "/profile/email/confirm",
+        data={"code": sent_code, "csrf": confirm_csrf},
+    )
+
+    assert response.status_code == 400
+    assert "Код истёк" in response.text
+    assert agent.email == "agent@example.com"
