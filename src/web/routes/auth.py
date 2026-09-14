@@ -25,7 +25,6 @@ from src.core.security import (
     verify_telegram_login,
 )
 from src.core.telegram import send_new_partner_notice
-from src.services.onboarding import needs_onboarding
 from src.services.protection import login_rate_limiter
 from src.services.social_auth import fetch_yandex_profile, login_social_agent, yandex_authorize_url
 from src.web.routes.pages import templates
@@ -38,10 +37,7 @@ Session = Annotated[AsyncSession, Depends(get_session)]
 def _log_in(request: Request, agent) -> RedirectResponse:
     request.session["agent_id"] = agent.id
     request.session["role"] = agent.role.value
-    if agent.role == AgentRole.ADMIN:
-        destination = "/admin"
-    else:
-        destination = "/onboarding" if needs_onboarding(agent) else "/cabinet"
+    destination = "/admin" if agent.role == AgentRole.ADMIN else "/cabinet"
     return RedirectResponse(destination, status_code=303)
 
 

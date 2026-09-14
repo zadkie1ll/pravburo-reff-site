@@ -45,6 +45,7 @@ async def profile_update(
     employment_format: Annotated[EmploymentFormat, Form()],
     payout_details: Annotated[str, Form(max_length=200)] = "",
     inn: Annotated[str, Form(max_length=12)] = "",
+    phone: Annotated[str, Form(max_length=20)] = "",
     csrf: Annotated[str, Form()] = "",
 ):
     if not valid_csrf(request.session, csrf):
@@ -62,6 +63,7 @@ async def profile_update(
                 employment_format=employment_format,
                 payout_details=payout_details,
                 inn=inn,
+                phone=phone,
             ),
         )
     except ValueError as exc:

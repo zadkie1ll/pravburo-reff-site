@@ -14,7 +14,6 @@ from pravburo_ref_common.models import EmploymentFormat
 
 from src.core.config import get_settings
 from src.services.network import NetworkSummary
-from src.services.onboarding import EMPLOYMENT_FORMAT_NOTES
 from src.services.payouts import (
     REWARD_TYPE_LABELS,
     STATUS_LABELS,
@@ -151,8 +150,6 @@ async def preview_index(request: Request, token: PreviewToken) -> HTMLResponse:
         ("Вход", "Email, пароль и социальный вход", f"/preview/page/login?{query}"),
         ("Регистрация", "Создание агентского аккаунта", f"/preview/page/register?{query}"),
         ("Подтверждение", "Шестизначный код из письма", f"/preview/page/confirm?{query}"),
-        ("Первый вход", "ФИО и формат сотрудничества", f"/preview/page/onboarding?{query}"),
-        ("Реквизиты", "Второй шаг первого входа", f"/preview/page/onboarding-payout?{query}"),
         ("Восстановление", "Запрос кода восстановления", f"/preview/page/reset?{query}"),
         ("Новый пароль", "Код и установка пароля", f"/preview/page/reset-confirm?{query}"),
         ("Кабинет агента", "Ссылка, QR, клиенты и начисления", f"/preview/page/cabinet?{query}"),
@@ -223,15 +220,6 @@ async def preview_page(request: Request, page: str, token: PreviewToken) -> HTML
         "login": ("login.html", {}),
         "register": ("register.html", {}),
         "confirm": ("confirm_registration.html", {}),
-        "onboarding": (
-            "onboarding_basic.html",
-            {
-                "display_name": data["agent"].display_name,
-                "employment_formats": EMPLOYMENT_FORMAT_LABELS,
-                "employment_format_notes": EMPLOYMENT_FORMAT_NOTES,
-            },
-        ),
-        "onboarding-payout": ("onboarding_payout.html", {}),
         "reset": ("password_reset.html", {}),
         "reset-confirm": (
             "password_reset_confirm.html",

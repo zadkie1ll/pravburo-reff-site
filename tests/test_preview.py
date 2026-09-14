@@ -33,8 +33,6 @@ def test_all_preview_pages_render(client: TestClient, monkeypatch) -> None:
         "login",
         "register",
         "confirm",
-        "onboarding",
-        "onboarding-payout",
         "reset",
         "reset-confirm",
         "cabinet",

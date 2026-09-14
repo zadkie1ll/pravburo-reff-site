@@ -22,6 +22,7 @@ def _fake_agent(**overrides) -> SimpleNamespace:
         employment_format=None,
         payout_details=None,
         inn=None,
+        invited_by_agent_id=None,
         is_active=True,
         created_at=datetime(2025, 1, 1, tzinfo=UTC),
     )
@@ -31,6 +32,11 @@ def _fake_agent(**overrides) -> SimpleNamespace:
 
 class _NoOpSession:
     async def commit(self) -> None:
+        return None
+
+
+class _ScalarNoneSession(_NoOpSession):
+    async def scalar(self, *args, **kwargs) -> None:
         return None
 
 
@@ -123,6 +129,64 @@ def test_profile_update_saves_and_notifies_admins_on_payout_change(client, monke
     assert call_args[0] == ["admin@example.com"]
     assert "реквизиты для выплат" in call_args[2]
     assert "формат сотрудничества" in call_args[2]
+
+
+def test_profile_update_sets_phone_when_first_provided(client) -> None:
+    agent = _fake_agent(phone_normalized=None, employment_format=EmploymentFormat.INDIVIDUAL)
+    app.dependency_overrides[require_agent] = lambda: agent
+
+    async def _get_session():
+        yield _ScalarNoneSession()
+
+    app.dependency_overrides[get_session] = _get_session
+    csrf = _csrf_token(client)
+
+    response = client.post(
+        "/profile",
+        data={
+            "display_name": "Иван Иванов",
+            "employment_format": EmploymentFormat.INDIVIDUAL.value,
+            "payout_details": "",
+            "inn": "",
+            "phone": "+7 999 123-45-67",
+            "csrf": csrf,
+        },
+    )
+
+    assert response.status_code == 200
+    assert agent.phone_normalized == "+79991234567"
+
+
+def test_profile_update_rejects_phone_used_by_another_account(client) -> None:
+    agent = _fake_agent(phone_normalized=None, employment_format=EmploymentFormat.INDIVIDUAL)
+
+    class _ConflictSession(_NoOpSession):
+        async def scalar(self, *args, **kwargs) -> int:
+            return 999
+
+    app.dependency_overrides[require_agent] = lambda: agent
+
+    async def _get_session():
+        yield _ConflictSession()
+
+    app.dependency_overrides[get_session] = _get_session
+    csrf = _csrf_token(client)
+
+    response = client.post(
+        "/profile",
+        data={
+            "display_name": "Иван Иванов",
+            "employment_format": EmploymentFormat.INDIVIDUAL.value,
+            "payout_details": "",
+            "inn": "",
+            "phone": "+7 999 123-45-67",
+            "csrf": csrf,
+        },
+    )
+
+    assert response.status_code == 400
+    assert "уже используется другим аккаунтом" in response.text
+    assert agent.phone_normalized is None
 
 
 def test_profile_update_individual_does_not_require_inn(client) -> None:

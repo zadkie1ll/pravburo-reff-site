@@ -13,7 +13,8 @@
 </dl></section>
 <section class="card"><h2>Изменить данные</h2>
 <form class="lead-form" method="post" action="/profile"><input type="hidden" name="csrf" value="{{ csrf_token }}">
-<label>ФИО<input name="display_name" maxlength="200" value="{{ agent.display_name }}" required></label>
+<label>ФИО<input name="display_name" maxlength="200" value="{{ agent.display_name }}"></label>
+<label>Телефон<input type="tel" name="phone" maxlength="20" value="{{ agent.phone_normalized or '' }}" placeholder="+7 999 000-00-00"></label>
 <label>Формат сотрудничества<select name="employment_format" required>{% for value, label in employment_formats.items() %}<option value="{{ value.value }}" {% if agent.employment_format == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
 <label>Реквизиты для выплат<input name="payout_details" maxlength="200" value="{{ agent.payout_details or '' }}" placeholder="Номер карты или расчётный счёт"></label>
 <label>ИНН<input name="inn" maxlength="12" value="{{ agent.inn or '' }}" placeholder="10 или 12 цифр, для самозанятых и ИП"></label>
