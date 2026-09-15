@@ -18,7 +18,7 @@ from src.core.push import send_push_notice
 from src.core.security import csrf_token, masked_phone
 from src.core.telegram import send_new_referral_notice, send_partner_notice
 from src.services.deal_stages import stage_label
-from src.services.network import get_network_summary
+from src.services.network import get_network_earnings_by_branch, get_network_summary
 from src.services.payouts import (
     REWARD_TYPE_LABELS,
     STATUS_LABELS,
@@ -64,6 +64,7 @@ async def cabinet(request: Request, agent: CurrentAgent, session: Session):
     stats = await get_link_stats(session, agent.id)
     activity = get_activity_stats([item.id for item in applications], rewards_by_application)
     network_summary = await get_network_summary(session, agent.id)
+    network_branches = await get_network_earnings_by_branch(session, agent.id)
     finance = build_finance_summary(list(all_rewards))
     rows = [
         {
@@ -92,6 +93,14 @@ async def cabinet(request: Request, agent: CurrentAgent, session: Session):
             "network_summary": network_summary,
             "network_override_paid": format_amount(network_summary.override_paid),
             "network_override_pending": format_amount(network_summary.override_pending),
+            "network_branches": [
+                {
+                    "display_name": branch.display_name,
+                    "paid_label": format_amount(branch.paid),
+                    "pending_label": format_amount(branch.pending),
+                }
+                for branch in network_branches
+            ],
             "finance": finance,
             "csrf_token": csrf_token(request.session),
         },

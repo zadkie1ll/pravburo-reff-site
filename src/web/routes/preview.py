@@ -243,6 +243,18 @@ async def preview_page(request: Request, page: str, token: PreviewToken) -> HTML
                 ),
                 "network_override_paid": "4 200 ₽",
                 "network_override_pending": "950 ₽",
+                "network_branches": [
+                    {
+                        "display_name": "Иван Петров",
+                        "paid_label": "3 000 ₽",
+                        "pending_label": "500 ₽",
+                    },
+                    {
+                        "display_name": "Ольга Смирнова",
+                        "paid_label": "1 200 ₽",
+                        "pending_label": "450 ₽",
+                    },
+                ],
                 "finance": FinanceSummary(
                     total_paid_label="18 000 ₽",
                     this_month_label="3 000 ₽",
