@@ -99,6 +99,7 @@ p { line-height: 1.65; }
 .eyebrow, .label { margin: 0 0 10px; color: var(--accent); font-family: "TT Norms Medium", sans-serif; font-size: 12px; font-weight: 700; letter-spacing: .13em; text-transform: uppercase; }
 
 .dashboard-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(280px, .75fr); gap: 24px; }
+.dashboard-grid .card-wide { grid-column: 1 / -1; }
 .preview-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
 .form-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(360px, .85fr); gap: 50px; align-items: start; }
 .card, .faq-list details { border: 1px solid rgba(54, 92, 128, .09); border-radius: 24px; background: linear-gradient(145deg, rgba(255, 255, 255, .98), rgba(232, 244, 255, .92)); box-shadow: var(--shadow); }
