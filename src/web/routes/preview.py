@@ -1,6 +1,5 @@
 import hmac
 from datetime import UTC, datetime
-from decimal import Decimal
 from io import BytesIO
 from types import SimpleNamespace
 from typing import Annotated
@@ -13,7 +12,6 @@ from fastapi.responses import HTMLResponse, Response
 from pravburo_ref_common.models import EmploymentFormat
 
 from src.core.config import get_settings
-from src.services.network import NetworkSummary
 from src.services.payouts import (
     REWARD_TYPE_LABELS,
     STATUS_LABELS,
@@ -23,7 +21,7 @@ from src.services.payouts import (
     PendingGroup,
 )
 from src.services.profile import EMPLOYMENT_FORMAT_LABELS
-from src.services.referrals import ActivityStats, LinkStats
+from src.services.referrals import LinkStats, NetworkClientRow
 from src.web.routes.pages import templates
 
 router = APIRouter(prefix="/preview", tags=["UI preview"])
@@ -203,17 +201,22 @@ async def preview_referral(
 @router.get("/page/{page}", response_class=HTMLResponse)
 async def preview_page(request: Request, page: str, token: PreviewToken) -> HTMLResponse:
     data = sample_data(token)
-    rows = [
-        {
-            "application": data["application_one"],
-            "phone": "+7 *** ***-45-67",
-            "reward_summary": "Аванс: Ожидает решения",
-        },
-        {
-            "application": data["application_two"],
-            "phone": "+7 *** ***-21-09",
-            "reward_summary": "Аванс: Отклонено",
-        },
+    network_client_rows = [
+        NetworkClientRow(
+            masked_phone="+7 *** *** ** 67",
+            created_at=datetime.now(UTC),
+            reward_summary="Аванс: Ожидает решения",
+        ),
+        NetworkClientRow(
+            masked_phone="+7 *** *** ** 09",
+            created_at=datetime.now(UTC),
+            reward_summary="Аванс: Отклонено",
+        ),
+        NetworkClientRow(
+            masked_phone="+7 *** *** ** 31",
+            created_at=datetime.now(UTC),
+            reward_summary="Бонус за сеть: Выплачено",
+        ),
     ]
     templates_by_page = {
         "home": ("index.html", {"app_name": "Prav-Buro Refferal"}),
@@ -229,32 +232,11 @@ async def preview_page(request: Request, page: str, token: PreviewToken) -> HTML
             "agent_dashboard.html",
             {
                 "agent": data["agent"],
-                "rows": rows,
                 "referral_url": data["referral_url"],
                 "qr_url": data["qr_url"],
                 "bounty_admin_url": get_settings().bounty_admin_url,
                 "link_stats": LinkStats(visits=48, applications=2),
-                "activity_stats": ActivityStats(applications=2, paying_clients=1),
-                "network_summary": NetworkSummary(
-                    direct_invitees=3,
-                    total_network_size=7,
-                    override_paid=Decimal("4200.00"),
-                    override_pending=Decimal("950.00"),
-                ),
-                "network_override_paid": "4 200 ₽",
-                "network_override_pending": "950 ₽",
-                "network_branches": [
-                    {
-                        "display_name": "Иван Петров",
-                        "paid_label": "3 000 ₽",
-                        "pending_label": "500 ₽",
-                    },
-                    {
-                        "display_name": "Ольга Смирнова",
-                        "paid_label": "1 200 ₽",
-                        "pending_label": "450 ₽",
-                    },
-                ],
+                "network_client_rows": network_client_rows,
                 "finance": FinanceSummary(
                     total_paid_label="18 000 ₽",
                     this_month_label="3 000 ₽",

@@ -18,4 +18,4 @@ def test_password_hash_is_compatible_and_salted() -> None:
 def test_russian_phone_variants_have_one_identity() -> None:
     assert normalize_phone("8 (999) 123-45-67") == "+79991234567"
     assert normalize_phone("+7 999 123 45 67") == "+79991234567"
-    assert masked_phone("+79991234567") == "+7 *** ***-45-67"
+    assert masked_phone("+79991234567") == "+7 *** *** ** 67"

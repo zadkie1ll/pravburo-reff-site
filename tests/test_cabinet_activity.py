@@ -16,7 +16,7 @@ async def _dispose_engine_after_test():
     await engine.dispose()
 
 
-async def test_cabinet_shows_activity_conversion() -> None:
+async def test_cabinet_client_table_shows_reward_status_per_client() -> None:
     marker = uuid.uuid4().hex[:8]
     async with session_factory() as session:
         agent = Agent(email=f"{uuid.uuid4()}@example.test", display_name=f"Партнёр{marker}")
@@ -66,5 +66,5 @@ async def test_cabinet_shows_activity_conversion() -> None:
             await session.commit()
 
     assert response.status_code == 200
-    assert "Моя активность" in response.text
-    assert "50%" in response.text
+    assert "Основная выплата: Ожидает решения" in response.text
+    assert "Договор не заключен" in response.text

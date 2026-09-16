@@ -80,9 +80,9 @@ def normalize_phone(value: str) -> str:
 
 def masked_phone(phone: str) -> str:
     digits = "".join(character for character in phone if character.isdigit())
-    if len(digits) < 4:
+    if len(digits) < 2:
         return "***"
-    return f"+{digits[0]} *** ***-{digits[-4:-2]}-{digits[-2:]}"
+    return f"+{digits[0]} *** *** ** {digits[-2:]}"
 
 
 def verify_telegram_login(payload: dict[str, str], bot_token: str, max_age: int) -> bool:

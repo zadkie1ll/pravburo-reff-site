@@ -1,5 +1,4 @@
 import logging
-from collections import defaultdict
 from io import BytesIO
 from typing import Annotated
 from uuid import UUID
@@ -8,30 +7,22 @@ import qrcode
 from fastapi import APIRouter, Depends, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from pravburo_ref_common.database import get_session
-from pravburo_ref_common.models import Agent, AgentRole, ReferralApplication, Reward
+from pravburo_ref_common.models import Agent, AgentRole, Reward
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config import get_settings
 from src.core.email import send_referral_accepted_notice
 from src.core.push import send_push_notice
-from src.core.security import csrf_token, masked_phone
+from src.core.security import csrf_token
 from src.core.telegram import send_new_referral_notice, send_partner_notice
-from src.services.deal_stages import stage_label
-from src.services.network import get_network_earnings_by_branch, get_network_summary
-from src.services.payouts import (
-    REWARD_TYPE_LABELS,
-    STATUS_LABELS,
-    build_finance_summary,
-    format_amount,
-    payout_status_slug,
-)
+from src.services.payouts import build_finance_summary
 from src.services.protection import rate_limiter, verify_turnstile
 from src.services.referrals import (
     ApplicationInput,
     create_first_application,
-    get_activity_stats,
     get_link_stats,
+    get_network_client_rows,
     record_link_visit,
 )
 from src.site.crm_client import CRMClient
@@ -47,60 +38,20 @@ Session = Annotated[AsyncSession, Depends(get_session)]
 async def cabinet(request: Request, agent: CurrentAgent, session: Session):
     if agent.role == AgentRole.ADMIN:
         return RedirectResponse("/admin", status_code=303)
-    applications = list(
-        (
-            await session.scalars(
-                select(ReferralApplication)
-                .where(ReferralApplication.agent_id == agent.id)
-                .order_by(ReferralApplication.created_at.desc())
-            )
-        ).all()
-    )
     all_rewards = (await session.scalars(select(Reward).where(Reward.agent_id == agent.id))).all()
-    rewards_by_application: dict[int, list[Reward]] = defaultdict(list)
-    for reward in all_rewards:
-        rewards_by_application[reward.application_id].append(reward)
     settings = get_settings()
     stats = await get_link_stats(session, agent.id)
-    activity = get_activity_stats([item.id for item in applications], rewards_by_application)
-    network_summary = await get_network_summary(session, agent.id)
-    network_branches = await get_network_earnings_by_branch(session, agent.id)
+    client_rows = await get_network_client_rows(session, agent.id)
     finance = build_finance_summary(list(all_rewards))
-    rows = [
-        {
-            "application": item,
-            "phone": masked_phone(item.phone_normalized),
-            "stage_label": stage_label(item.deal_stage_code),
-            "reward_summary": ", ".join(
-                f"{REWARD_TYPE_LABELS.get(r.reward_type, r.reward_type.value)}: "
-                f"{STATUS_LABELS[payout_status_slug(r)]}"
-                for r in rewards_by_application.get(item.id, [])
-            )
-            or "Договор не заключен",
-        }
-        for item in applications
-    ]
     return templates.TemplateResponse(
         request=request,
         name="agent_dashboard.html",
         context={
             "agent": agent,
-            "rows": rows,
             "referral_url": f"{settings.public_base_url}/r/{agent.referral_code}",
             "bounty_admin_url": settings.bounty_admin_url,
             "link_stats": stats,
-            "activity_stats": activity,
-            "network_summary": network_summary,
-            "network_override_paid": format_amount(network_summary.override_paid),
-            "network_override_pending": format_amount(network_summary.override_pending),
-            "network_branches": [
-                {
-                    "display_name": branch.display_name,
-                    "paid_label": format_amount(branch.paid),
-                    "pending_label": format_amount(branch.pending),
-                }
-                for branch in network_branches
-            ],
+            "network_client_rows": client_rows,
             "finance": finance,
             "csrf_token": csrf_token(request.session),
         },

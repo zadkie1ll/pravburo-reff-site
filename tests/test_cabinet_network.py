@@ -18,7 +18,7 @@ async def _dispose_engine_after_test():
     await engine.dispose()
 
 
-async def test_cabinet_shows_network_summary() -> None:
+async def test_cabinet_shows_override_reward_per_client() -> None:
     marker = uuid.uuid4().hex[:8]
     async with session_factory() as session:
         agent = Agent(email=f"{uuid.uuid4()}@example.test", display_name=f"Оля{marker}")
@@ -92,6 +92,6 @@ async def test_cabinet_shows_network_summary() -> None:
             await session.commit()
 
     assert response.status_code == 200
-    assert "Моя сеть" in response.text
+    assert "Бонус за сеть" in response.text
     assert "300" in response.text
     assert "150" in response.text

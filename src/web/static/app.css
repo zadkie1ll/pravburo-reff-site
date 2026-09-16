@@ -235,6 +235,13 @@ td form { display: grid; gap: 9px; min-width: 230px; }
   .footer-nav { justify-content: center; }
   .footer-meta { grid-column: 1; }
   th, td { padding: 12px 10px; }
+  .table-stack thead { display: none; }
+  .table-stack, .table-stack tbody, .table-stack tr, .table-stack td { display: block; width: 100%; }
+  .table-stack tr { margin-bottom: 14px; padding: 4px 14px; border: 1px solid var(--line); border-radius: 16px; }
+  .table-stack tr:last-child { margin-bottom: 0; }
+  .table-stack td { padding: 10px 0; border-bottom: 1px solid var(--line); }
+  .table-stack td:last-child { border-bottom: none; }
+  .table-stack td[data-label]::before { content: attr(data-label); display: block; margin-bottom: 4px; color: var(--muted); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
 }
 
 /* CSP sets style-src 'self' (no 'unsafe-inline'), so inline style="" attributes

@@ -1,4 +1,5 @@
 import logging
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Protocol
@@ -13,7 +14,13 @@ from pravburo_ref_common.models import (
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.security import normalize_phone
+from src.core.security import masked_phone, normalize_phone
+from src.services.payouts import (
+    REWARD_TYPE_LABELS,
+    STATUS_LABELS,
+    format_amount,
+    payout_status_slug,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -51,29 +58,70 @@ async def get_link_stats(session: AsyncSession, agent_id: int) -> LinkStats:
     return LinkStats(visits=visits or 0, applications=applications or 0)
 
 
-@dataclass(slots=True)
-class ActivityStats:
-    applications: int
-    paying_clients: int
+@dataclass(frozen=True, slots=True)
+class NetworkClientRow:
+    """One client who generated income for this agent - either a direct
+    client of theirs, or a client brought in several levels down their
+    network, whose deal is generating an override for this agent."""
 
-    @property
-    def conversion_rate_label(self) -> str:
-        if not self.applications:
-            return "—"
-        return f"{round(self.paying_clients / self.applications * 100)}%"
+    masked_phone: str
+    created_at: datetime
+    reward_summary: str
 
 
-def get_activity_stats(
-    application_ids: list[int], rewards_by_application: dict[int, list]
-) -> ActivityStats:
-    """A client "paid" once any (non-override) reward exists for their
-    application - reward creation is triggered by a CRM deal stage change
-    (advance / deposit), so its mere presence means real money moved.
+async def get_network_client_rows(session: AsyncSession, agent_id: int) -> list[NetworkClientRow]:
+    """Every client this agent should see rewards for: their own direct
+    clients (listed even with no reward yet), plus any client elsewhere in
+    their network whose deal generated an override reward for them.
+
+    Overrides live on Reward rows with this agent's id and an
+    application_id pointing at someone else's client - a plain
+    `Reward.agent_id == agent_id` query already covers both cases, so there
+    is no need to walk the network tree here.
     """
-    paying_clients = sum(
-        1 for app_id in application_ids if rewards_by_application.get(app_id)
+    direct_applications = list(
+        (
+            await session.scalars(
+                select(ReferralApplication).where(ReferralApplication.agent_id == agent_id)
+            )
+        ).all()
     )
-    return ActivityStats(applications=len(application_ids), paying_clients=paying_clients)
+    rewards = list((await session.scalars(select(Reward).where(Reward.agent_id == agent_id))).all())
+    rewards_by_application: dict[int, list[Reward]] = defaultdict(list)
+    for reward in rewards:
+        rewards_by_application[reward.application_id].append(reward)
+
+    direct_application_ids = {application.id for application in direct_applications}
+    network_application_ids = set(rewards_by_application) - direct_application_ids
+    network_applications = []
+    if network_application_ids:
+        network_applications = list(
+            (
+                await session.scalars(
+                    select(ReferralApplication).where(
+                        ReferralApplication.id.in_(network_application_ids)
+                    )
+                )
+            ).all()
+        )
+
+    applications = direct_applications + network_applications
+    applications.sort(key=lambda application: application.created_at, reverse=True)
+
+    return [
+        NetworkClientRow(
+            masked_phone=masked_phone(application.phone_normalized),
+            created_at=application.created_at,
+            reward_summary=", ".join(
+                f"{REWARD_TYPE_LABELS.get(r.reward_type, r.reward_type.value)}: "
+                f"{STATUS_LABELS[payout_status_slug(r)]}"
+                + (f" ({format_amount(r.amount)})" if r.amount is not None else "")
+                for r in rewards_by_application.get(application.id, [])
+            )
+            or "Договор не заключен",
+        )
+        for application in applications
+    ]
 
 
 class LeadDeliveryGateway(Protocol):
