@@ -1,7 +1,13 @@
 from datetime import date
 
 import httpx
-from pravburo_ref_common.models import Agent, AgentIdentity, DeliveryStatus, ReferralApplication, Reward
+from pravburo_ref_common.models import (
+    Agent,
+    AgentIdentity,
+    DeliveryStatus,
+    ReferralApplication,
+    Reward,
+)
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -64,6 +70,54 @@ async def _send_message(token: str, chat_id: str, message: str) -> None:
         raise TelegramNotificationError(f"Telegram rejected notification for chat_id={chat_id}")
 
 
+async def _send_document(
+    token: str,
+    chat_id: str,
+    content: bytes,
+    filename: str,
+    caption: str = "",
+    message_thread_id: str = "",
+) -> None:
+    url = f"https://api.telegram.org/bot{token}/sendDocument"
+    data = {"chat_id": chat_id, "caption": caption}
+    if message_thread_id:
+        data["message_thread_id"] = message_thread_id
+    async with httpx.AsyncClient(timeout=60) as client:
+        response = await client.post(
+            url,
+            data=data,
+            files={"document": (filename, content, "application/octet-stream")},
+        )
+    try:
+        payload = response.json()
+    except ValueError:
+        payload = {}
+    if response.is_error or payload.get("ok") is not True:
+        raise TelegramNotificationError(f"Telegram rejected document for chat_id={chat_id}")
+
+
+async def send_backup_document(content: bytes, filename: str, caption: str = "") -> None:
+    """Send a file to the dedicated backup chat/topic via the admin bot.
+
+    Silently does nothing if DUMP_CHAT_ID isn't configured - callers that
+    need to know a backup didn't go out should check for that themselves
+    (e.g. to fall back to a text alert) rather than relying on an exception.
+    """
+    settings = get_settings()
+    token = settings.telegram_notification_bot_token
+    chat_id = settings.dump_chat_id
+    if not token or not chat_id:
+        return
+    await _send_document(
+        token,
+        chat_id,
+        content,
+        filename,
+        caption=caption,
+        message_thread_id=settings.dump_message_thread_id,
+    )
+
+
 async def _send_admin_notice(message: str) -> None:
     settings = get_settings()
     token = settings.telegram_notification_bot_token
@@ -99,6 +153,14 @@ async def send_new_referral_notice(agent: Agent, application: ReferralApplicatio
     settings = get_settings()
     message = build_new_referral_message(agent, application, settings.bitrix_lead_url_template)
     await _send_admin_notice(message)
+
+
+def build_backup_failed_message(reason: str) -> str:
+    return "\n".join(["Ежедневный бэкап БД не отправлен", reason])
+
+
+async def send_backup_failed_notice(reason: str) -> None:
+    await _send_admin_notice(build_backup_failed_message(reason))
 
 
 def build_new_partner_message(agent: Agent) -> str:

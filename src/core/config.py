@@ -55,6 +55,8 @@ class Settings(BaseSettings):
     telegram_login_max_age_seconds: int = 86400
     telegram_notification_bot_token: str = ""
     telegram_notification_chat_ids: str = ""
+    dump_chat_id: str = ""
+    dump_message_thread_id: str = ""
     telegram_manager_url: str = "https://t.me/pravburo_manager"
     telegram_materials_url: str = "https://t.me/pravburo_materials"
     yandex_client_id: str = ""
