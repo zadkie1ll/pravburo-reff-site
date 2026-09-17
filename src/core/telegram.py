@@ -67,7 +67,10 @@ async def _send_message(token: str, chat_id: str, message: str) -> None:
     except ValueError:
         payload = {}
     if response.is_error or payload.get("ok") is not True:
-        raise TelegramNotificationError(f"Telegram rejected notification for chat_id={chat_id}")
+        reason = payload.get("description") or response.text[:300]
+        raise TelegramNotificationError(
+            f"Telegram rejected notification for chat_id={chat_id}: {reason}"
+        )
 
 
 async def _send_document(
@@ -93,7 +96,10 @@ async def _send_document(
     except ValueError:
         payload = {}
     if response.is_error or payload.get("ok") is not True:
-        raise TelegramNotificationError(f"Telegram rejected document for chat_id={chat_id}")
+        reason = payload.get("description") or response.text[:300]
+        raise TelegramNotificationError(
+            f"Telegram rejected document for chat_id={chat_id}: {reason}"
+        )
 
 
 async def send_backup_document(content: bytes, filename: str, caption: str = "") -> None:
