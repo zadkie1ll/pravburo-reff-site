@@ -258,6 +258,12 @@ td form { display: grid; gap: 9px; min-width: 230px; }
    are silently dropped by the browser - use these utility classes instead. */
 .mt-14 { margin-top: 14px; }
 .nowrap { white-space: nowrap; }
+.option-list { display: grid; gap: 12px; margin: 16px 0 20px; }
+.option-card { display: flex; align-items: flex-start; gap: 14px; padding: 16px 18px; border: 1px solid var(--line); border-radius: 16px; background: rgba(255, 255, 255, .7); color: var(--ink); font-family: inherit; font-size: 16px; cursor: pointer; transition: border-color .18s ease, background .18s ease; }
+.option-card:hover { border-color: var(--brand); }
+.option-card:has(input:checked) { border-color: var(--brand); background: var(--accent-soft); }
+.option-card input { flex: none; width: 20px; min-height: 20px; height: 20px; margin-top: 3px; padding: 0; accent-color: var(--brand); }
+.option-body { display: grid; gap: 4px; line-height: 1.5; }
 .reason-note { display: inline-block; margin-top: 6px; color: var(--muted); font-size: 13px; }
 .mt-20 { margin-top: 20px; }
 .inline-form { display: inline; }

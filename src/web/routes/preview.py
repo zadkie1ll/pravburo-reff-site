@@ -20,7 +20,7 @@ from src.services.payouts import (
     PayoutRow,
     PendingGroup,
 )
-from src.services.profile import EMPLOYMENT_FORMAT_LABELS
+from src.services.profile import EMPLOYMENT_FORMAT_LABELS, EMPLOYMENT_FORMAT_OPTIONS
 from src.services.referrals import LinkStats, NetworkClientRow
 from src.web.routes.pages import templates
 
@@ -152,6 +152,7 @@ async def preview_index(request: Request, token: PreviewToken) -> HTMLResponse:
         ("Новый пароль", "Код и установка пароля", f"/preview/page/reset-confirm?{query}"),
         ("Кабинет агента", "Ссылка, QR, клиенты и начисления", f"/preview/page/cabinet?{query}"),
         ("Профиль", "Данные агента и реквизиты", f"/preview/page/profile?{query}"),
+        ("Выбор формы", "Первый вход: форма сотрудничества", f"/preview/page/onboarding?{query}"),
         ("Реферальная форма", "Публичная форма по UUID-ссылке", referral_url),
         ("Заявка принята", "Успешная отправка формы", f"/preview/page/success?{query}"),
         ("FAQ", "Как это работает и частые вопросы", f"/preview/page/faq?{query}"),
@@ -333,6 +334,15 @@ async def preview_page(request: Request, page: str, token: PreviewToken) -> HTML
                 "filters": PayoutFilters(),
                 "reward_types": REWARD_TYPE_LABELS,
                 "statuses": PAGE_STATUS_LABELS,
+            },
+        ),
+        "onboarding": (
+            "onboarding.html",
+            {
+                "onboarding": True,
+                "options": EMPLOYMENT_FORMAT_OPTIONS,
+                "telegram_manager_url": "https://t.me/pravburo",
+                "csrf_token": "preview",
             },
         ),
         "not-found": ("not_found.html", {}),

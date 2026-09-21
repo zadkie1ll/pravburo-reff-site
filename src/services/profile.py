@@ -17,6 +17,27 @@ EMPLOYMENT_FORMAT_LABELS = {
 }
 
 
+# Что видит партнёр на странице выбора формы сотрудничества (порядок = порядок на странице).
+EMPLOYMENT_FORMAT_OPTIONS = [
+    (
+        EmploymentFormat.SELF_EMPLOYED,
+        "Самозанятый",
+        "вы получаете полную сумму вознаграждения и самостоятельно платите налог 4% через "
+        "приложение «Мой налог». Самый удобный вариант.",
+    ),
+    (
+        EmploymentFormat.INDIVIDUAL_ENTREPRENEUR,
+        "ИП",
+        "выплата поступает на расчётный счёт, налоги платите сами по своему тарифу.",
+    ),
+    (
+        EmploymentFormat.INDIVIDUAL,
+        "Физическое лицо",
+        "из суммы вознаграждения удерживается 43% на налоги и взносы.",
+    ),
+]
+
+
 def validate_inn(employment_format: EmploymentFormat, inn: str) -> str | None:
     inn = inn.strip()
     if employment_format == EmploymentFormat.INDIVIDUAL:

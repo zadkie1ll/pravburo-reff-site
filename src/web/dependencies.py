@@ -5,6 +5,8 @@ from pravburo_ref_common.database import get_session
 from pravburo_ref_common.models import Agent, AgentRole
 from sqlalchemy.ext.asyncio import AsyncSession
 
+ONBOARDING_PATH = "/onboarding"
+
 
 async def optional_agent(
     request: Request, session: Annotated[AsyncSession, Depends(get_session)]
@@ -22,6 +24,13 @@ async def require_agent(
     if not agent.is_active:
         request.session.clear()
         raise HTTPException(status_code=303, headers={"Location": "/login"})
+    # Партнёр не может пользоваться кабинетом, пока не выберет форму сотрудничества.
+    if (
+        agent.role == AgentRole.AGENT
+        and agent.employment_format is None
+        and request.url.path != ONBOARDING_PATH
+    ):
+        raise HTTPException(status_code=303, headers={"Location": ONBOARDING_PATH})
     return agent
 
 
