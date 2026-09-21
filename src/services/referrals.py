@@ -1,7 +1,7 @@
 import logging
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Protocol
 
@@ -73,11 +73,34 @@ async def get_link_stats(session: AsyncSession, agent_id: int) -> LinkStats:
 
 
 @dataclass(frozen=True, slots=True)
+class VisitDay:
+    day: date
+    count: int
+
+    @property
+    def day_label(self) -> str:
+        return self.day.strftime("%d.%m.%Y")
+
+
+async def get_visits_by_day(session: AsyncSession, agent_id: int) -> list[VisitDay]:
+    """Переходы по ссылке агента по дням (по московскому времени), новые дни первыми."""
+    day = func.date(func.timezone("Europe/Moscow", ReferralLinkVisit.created_at))
+    rows = await session.execute(
+        select(day, func.count())
+        .where(ReferralLinkVisit.agent_id == agent_id)
+        .group_by(day)
+        .order_by(day.desc())
+    )
+    return [VisitDay(day=visit_day, count=count) for visit_day, count in rows.all()]
+
+
+@dataclass(frozen=True, slots=True)
 class NetworkClientRow:
     """One client who generated income for this agent - either a direct
     client of theirs, or a client brought in several levels down their
     network, whose deal is generating an override for this agent."""
 
+    client_name: str
     masked_phone: str
     created_at: datetime
     reward_summary: str
@@ -147,6 +170,7 @@ async def get_network_client_rows(session: AsyncSession, agent_id: int) -> list[
 
     return [
         NetworkClientRow(
+            client_name=application.full_name,
             masked_phone=masked_phone(application.phone_normalized),
             created_at=application.created_at,
             reward_summary=", ".join(

@@ -203,6 +203,7 @@ async def preview_page(request: Request, page: str, token: PreviewToken) -> HTML
     data = sample_data(token)
     network_client_rows = [
         NetworkClientRow(
+            client_name="Иванов Пётр",
             masked_phone="+7 *** *** ** 67",
             created_at=datetime.now(UTC),
             reward_summary="Аванс: Ожидает решения",
@@ -210,6 +211,7 @@ async def preview_page(request: Request, page: str, token: PreviewToken) -> HTML
             reward_totals="Выплачено: 0 ₽ · Ожидается: 3 000 ₽",
         ),
         NetworkClientRow(
+            client_name="Смирнова Анна",
             masked_phone="+7 *** *** ** 09",
             created_at=datetime.now(UTC),
             reward_summary="Аванс: Отклонено",
@@ -217,6 +219,7 @@ async def preview_page(request: Request, page: str, token: PreviewToken) -> HTML
             reward_totals="—",
         ),
         NetworkClientRow(
+            client_name="Кузнецов Дмитрий",
             masked_phone="+7 *** *** ** 31",
             created_at=datetime.now(UTC),
             reward_summary="Бонус за сеть: Выплачено",

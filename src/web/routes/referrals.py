@@ -23,6 +23,7 @@ from src.services.referrals import (
     create_first_application,
     get_link_stats,
     get_network_client_rows,
+    get_visits_by_day,
     record_link_visit,
 )
 from src.site.crm_client import CRMClient
@@ -55,6 +56,18 @@ async def cabinet(request: Request, agent: CurrentAgent, session: Session):
             "finance": finance,
             "csrf_token": csrf_token(request.session),
         },
+    )
+
+
+@router.get("/cabinet/visits", response_class=HTMLResponse)
+async def cabinet_visits(request: Request, agent: CurrentAgent, session: Session):
+    if agent.role == AgentRole.ADMIN:
+        return RedirectResponse("/admin", status_code=303)
+    days = await get_visits_by_day(session, agent.id)
+    return templates.TemplateResponse(
+        request=request,
+        name="visits.html",
+        context={"agent": agent, "days": days, "total": sum(day.count for day in days)},
     )
 
 
