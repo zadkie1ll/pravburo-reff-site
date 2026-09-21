@@ -117,21 +117,33 @@ class _FakeExecuteResult:
         return self._rows
 
 
+class _FakeScalarResult:
+    def __init__(self, items) -> None:
+        self._items = items
+
+    def all(self):
+        return self._items
+
+
 class _FakePayoutsSession:
-    def __init__(self, rows) -> None:
+    def __init__(self, rows, applications=()) -> None:
         self._rows = rows
+        self._applications = list(applications)
 
     async def execute(self, *args, **kwargs):
         return _FakeExecuteResult(self._rows)
 
+    async def scalars(self, *args, **kwargs):
+        return _FakeScalarResult(self._applications)
 
-def _override_agent_and_rewards(agent, rows):
+
+def _override_agent_and_rewards(agent, rows, applications=()):
     from src.web.dependencies import require_agent
 
     app.dependency_overrides[require_agent] = lambda: agent
 
     async def _get_session():
-        yield _FakePayoutsSession(rows)
+        yield _FakePayoutsSession(rows, applications)
 
     app.dependency_overrides[get_session] = _get_session
 
@@ -212,3 +224,100 @@ def test_payouts_page_shows_reason_only_for_rejected(client) -> None:
     assert "Отклонено" in response.text
     assert "Не удалось связаться с клиентом" in response.text
     assert "Причина, которую агенту показывать нельзя" not in response.text
+
+
+def _get_page(client, agent, rows, applications=(), url="/payouts"):
+    from src.web.dependencies import require_agent
+
+    _override_agent_and_rewards(agent, rows, applications)
+    try:
+        return client.get(url)
+    finally:
+        app.dependency_overrides.pop(require_agent, None)
+        app.dependency_overrides.pop(get_session, None)
+
+
+def _application(name, stage_code=None) -> SimpleNamespace:
+    return SimpleNamespace(full_name=name, deal_stage_code=stage_code)
+
+
+def test_payouts_page_shows_pre_contract_statuses_for_clients_without_reward(client) -> None:
+    applications = [
+        _application("Клиент Анализов"),
+        _application("Клиент Депозитов", "UC_4FX5NE"),
+        _application("Клиент Игнорин", "UC_1BEALQ"),
+    ]
+    response = _get_page(client, SimpleNamespace(id=1), [], applications)
+
+    assert response.status_code == 200
+    for text in ("Клиент Анализов", "Клиент Депозитов", "Клиент Игнорин"):
+        assert text in response.text
+    assert "status-analysis" in response.text
+    assert "status-deposit" in response.text
+    assert "status-ignored" in response.text
+
+
+def test_payouts_page_shows_pending_reward_as_scheduled(client) -> None:
+    reward = _reward(
+        reward_type=RewardType.ADVANCE,
+        status=RewardStatus.PENDING,
+        amount=Decimal("3000"),
+    )
+    response = _get_page(client, SimpleNamespace(id=1), [(reward, "Иван Иванов")])
+
+    assert "Запланировано" in response.text
+    assert "Ожидает решения" not in response.text
+
+
+def test_payouts_status_filter_applies_to_clients_without_reward(client) -> None:
+    applications = [
+        _application("Клиент Анализов"),
+        _application("Клиент Игнорин", "UC_1BEALQ"),
+    ]
+    response = _get_page(
+        client, SimpleNamespace(id=1), [], applications, url="/payouts?status=ignored"
+    )
+
+    assert "Клиент Игнорин" in response.text
+    assert "Клиент Анализов" not in response.text
+
+
+def test_payouts_month_filter_hides_clients_without_reward(client) -> None:
+    response = _get_page(
+        client,
+        SimpleNamespace(id=1),
+        [],
+        [_application("Клиент Анализов")],
+        url="/payouts?month=2026-02",
+    )
+
+    assert "Клиент Анализов" not in response.text
+
+
+def test_payouts_pdf_contains_only_rows_with_reward(client, monkeypatch) -> None:
+    from src.web.routes import payouts as payouts_route
+
+    captured: list = []
+
+    def fake_build(agent_label, filters_label, rows):
+        captured.extend(rows)
+        return b"%PDF-fake"
+
+    monkeypatch.setattr(payouts_route, "build_payouts_pdf", fake_build)
+    reward = _reward(
+        reward_type=RewardType.MAIN,
+        status=RewardStatus.APPROVED,
+        paid_at=datetime(2026, 2, 12, tzinfo=UTC),
+        amount=Decimal("10000"),
+    )
+    agent = SimpleNamespace(id=1, display_name="Партнёр", email="a@example.com")
+    response = _get_page(
+        client,
+        agent,
+        [(reward, "Алексей Смирнов")],
+        [_application("Клиент Анализов")],
+        url="/payouts/export.pdf",
+    )
+
+    assert response.status_code == 200
+    assert [row.client_name for row in captured] == ["Алексей Смирнов"]

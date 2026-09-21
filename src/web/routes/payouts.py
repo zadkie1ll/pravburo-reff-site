@@ -8,8 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.payout_pdf import build_payouts_pdf
 from src.services.payouts import (
+    PAGE_STATUS_LABELS,
     REWARD_TYPE_LABELS,
-    STATUS_LABELS,
     PayoutFilters,
     get_payout_rows,
 )
@@ -29,7 +29,7 @@ def _filters_label(filters: PayoutFilters) -> str:
             f"тип: {REWARD_TYPE_LABELS.get(RewardType(filters.reward_type), filters.reward_type)}"
         )
     if filters.status:
-        parts.append(f"статус: {STATUS_LABELS.get(filters.status, filters.status)}")
+        parts.append(f"статус: {PAGE_STATUS_LABELS.get(filters.status, filters.status)}")
     return ", ".join(parts)
 
 
@@ -52,7 +52,7 @@ async def payouts_page(
             "rows": rows,
             "filters": filters,
             "reward_types": REWARD_TYPE_LABELS,
-            "statuses": STATUS_LABELS,
+            "statuses": PAGE_STATUS_LABELS,
         },
     )
 
@@ -68,7 +68,9 @@ async def payouts_export_pdf(
     filters = PayoutFilters(month=month, reward_type=reward_type, status=status)
     rows = await get_payout_rows(session, agent.id, filters)
     agent_label = agent.display_name or agent.email or f"Партнёр #{agent.id}"
-    pdf_bytes = build_payouts_pdf(agent_label, _filters_label(filters), rows)
+    # В PDF (для чека самозанятого) только строки с выплатой, без "Анализа ситуации" и т. п.
+    payout_rows = [row for row in rows if row.reward is not None]
+    pdf_bytes = build_payouts_pdf(agent_label, _filters_label(filters), payout_rows)
     return Response(
         pdf_bytes,
         media_type="application/pdf",

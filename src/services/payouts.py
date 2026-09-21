@@ -3,8 +3,10 @@ from datetime import UTC, datetime
 from decimal import Decimal
 
 from pravburo_ref_common.models import ReferralApplication, Reward, RewardStatus, RewardType
-from sqlalchemy import extract, select
+from sqlalchemy import exists, extract, select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.services.deal_stages import DEFAULT_PAYOUT_STAGE_LABEL, PAYOUT_STAGE_LABELS
 
 REWARD_TYPE_LABELS = {
     RewardType.ADVANCE: "Аванс",
@@ -22,12 +24,30 @@ STATUS_LABELS = {
 }
 
 
+# Статусы страницы "Выплаты" для партнёра: этапы до договора (из Bitrix, выплаты ещё нет)
+# и состояние самой выплаты. Для партнёра "ждёт решения админа" = "Запланировано".
+PAGE_STATUS_LABELS = {
+    "analysis": DEFAULT_PAYOUT_STAGE_LABEL,
+    "deposit": PAYOUT_STAGE_LABELS["UC_4FX5NE"],
+    "ignored": PAYOUT_STAGE_LABELS["UC_1BEALQ"],
+    "scheduled": "Запланировано",
+    "paid": "Выплачено",
+    "rejected": "Отклонено",
+}
+STAGE_STATUS_SLUGS = {"UC_4FX5NE": "deposit", "UC_1BEALQ": "ignored"}
+
+
 def payout_status_slug(reward: Reward) -> str:
     if reward.status == RewardStatus.REJECTED:
         return "rejected"
     if reward.status == RewardStatus.PENDING:
         return "pending"
     return "paid" if reward.paid_at is not None else "scheduled"
+
+
+def page_status_slug(reward: Reward) -> str:
+    slug = payout_status_slug(reward)
+    return "scheduled" if slug == "pending" else slug
 
 
 def format_amount(amount) -> str:
@@ -45,7 +65,7 @@ class PayoutFilters:
 
 @dataclass(slots=True)
 class PayoutRow:
-    reward: Reward
+    reward: Reward | None  # None - у клиента ещё нет выплаты (он на этапе до договора)
     client_name: str
     type_label: str
     status_label: str
@@ -78,24 +98,55 @@ async def get_payout_rows(
                 extract("month", Reward.paid_at) == month,
             )
 
+    status_filter = "scheduled" if filters.status == "pending" else filters.status  # старые ссылки
+
     rows = (await session.execute(statement)).all()
     result = []
     for reward, full_name in rows:
-        slug = payout_status_slug(reward)
-        if filters.status and filters.status != slug:
+        slug = page_status_slug(reward)
+        if status_filter and status_filter != slug:
             continue
         result.append(
             PayoutRow(
                 reward=reward,
                 client_name=full_name,
                 type_label=REWARD_TYPE_LABELS.get(reward.reward_type, reward.reward_type.value),
-                status_label=STATUS_LABELS.get(slug, slug),
+                status_label=PAGE_STATUS_LABELS[slug],
                 status_slug=slug,
                 amount_label=format_amount(reward.amount),
                 payout_date_label=reward.paid_at.strftime("%d.%m.%Y") if reward.paid_at else "—",
                 rejection_reason=(reward.rejection_reason or "") if slug == "rejected" else "",
             )
         )
+
+    # Клиенты без выплаты: показываем этап до договора. Фильтры по месяцу выплаты и по типу
+    # выплаты к ним не применимы, поэтому при включённом фильтре такие строки скрыты.
+    if not filters.month and not filters.reward_type:
+        has_reward = exists().where(
+            Reward.application_id == ReferralApplication.id, Reward.agent_id == agent_id
+        )
+        applications = (
+            await session.scalars(
+                select(ReferralApplication)
+                .where(ReferralApplication.agent_id == agent_id, ~has_reward)
+                .order_by(ReferralApplication.created_at.desc())
+            )
+        ).all()
+        for application in applications:
+            slug = STAGE_STATUS_SLUGS.get(application.deal_stage_code or "", "analysis")
+            if status_filter and status_filter != slug:
+                continue
+            result.append(
+                PayoutRow(
+                    reward=None,
+                    client_name=application.full_name,
+                    type_label="—",
+                    status_label=PAGE_STATUS_LABELS[slug],
+                    status_slug=slug,
+                    amount_label="—",
+                    payout_date_label="—",
+                )
+            )
     return result
 
 

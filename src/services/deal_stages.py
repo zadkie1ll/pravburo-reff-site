@@ -21,6 +21,20 @@ STAGE_LABELS: dict[str, str] = {
 }
 
 
+# Стадии воронки "Основная" (category_id=0, продажи), которые партнёр видит в "Выплатах",
+# пока договора нет и выплаты ещё нет. Всё остальное в этой воронке = "Анализ ситуации".
+# Push по этим стадиям не отправляется.
+PAYOUT_STAGE_LABELS: dict[str, str] = {
+    "UC_4FX5NE": "Оплата депозита",  # "Договор составлен, ждём оплату"
+    "UC_1BEALQ": "Ушел в игнор",  # "Ушли в игнор"
+}
+DEFAULT_PAYOUT_STAGE_LABEL = "Анализ ситуации"
+
+
+def is_funnel_2_stage(stage_code: str) -> bool:
+    return stage_code.startswith("C2:")
+
+
 def stage_label(stage_code: str | None) -> str | None:
     """Название этапа для партнёра или None, если стадия не отслеживается."""
     if not stage_code:

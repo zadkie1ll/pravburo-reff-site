@@ -1,4 +1,9 @@
-from src.services.deal_stages import DEFAULT_STAGE_LABEL, STAGE_LABELS, stage_label
+from src.services.deal_stages import (
+    DEFAULT_STAGE_LABEL,
+    STAGE_LABELS,
+    is_funnel_2_stage,
+    stage_label,
+)
 
 
 def test_stage_label_returns_none_for_no_code() -> None:
@@ -20,3 +25,8 @@ def test_stage_label_maps_funnel_stages_to_tz_stages() -> None:
 def test_only_funnel_2_stages_are_tracked() -> None:
     assert all(code.startswith("C2:") for code in STAGE_LABELS)
     assert DEFAULT_STAGE_LABEL == "Заявка получена"
+
+
+def test_is_funnel_2_stage() -> None:
+    assert is_funnel_2_stage("C2:NEW")
+    assert not is_funnel_2_stage("UC_1BEALQ")

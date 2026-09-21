@@ -244,3 +244,55 @@ async def test_update_deal_stage_ignores_untracked_stage(monkeypatch) -> None:
             )
             await session.execute(delete(Agent).where(Agent.id == agent_id))
             await session.commit()
+
+
+async def test_update_deal_stage_remembers_pre_contract_stage_and_resets_on_return(
+    monkeypatch,
+) -> None:
+    settings = get_settings()
+    monkeypatch.setattr(settings, "internal_service_token", "test-token")
+
+    pushed: list[tuple] = []
+
+    async def fake_push(session, agent_id, title, body):
+        pushed.append((agent_id, title, body))
+
+    monkeypatch.setattr(internal_route, "send_push_notice", fake_push)
+
+    async with session_factory() as session:
+        agent_id, application_id = await _make_application(session)
+
+    async def post(client, stage_code):
+        return await client.post(
+            f"/internal/applications/{application_id}/stage",
+            headers={"X-Internal-Token": "test-token"},
+            json={"application_id": application_id, "deal_id": "555", "stage_code": stage_code},
+        )
+
+    async def stored_stage():
+        async with session_factory() as session:
+            return (await session.get(ReferralApplication, application_id)).deal_stage_code
+
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            await post(client, "UC_1BEALQ")  # "Ушли в игнор"
+            assert await stored_stage() == "UC_1BEALQ"
+
+            await post(client, "UC_6IE5TH")  # "Возврат на первую линию" - снова в работе
+            assert await stored_stage() is None
+
+            await post(client, "UC_4FX5NE")  # "Договор составлен, ждём оплату"
+            assert await stored_stage() == "UC_4FX5NE"
+
+            # Переход в воронку "Сопровождение" на стадию вне ТЗ не стирает запомненную стадию.
+            await post(client, "C2:UC_M5ONI8")
+            assert await stored_stage() == "UC_4FX5NE"
+
+        assert pushed == []  # по стадиям до договора push не шлём
+    finally:
+        async with session_factory() as session:
+            await session.execute(
+                delete(ReferralApplication).where(ReferralApplication.id == application_id)
+            )
+            await session.execute(delete(Agent).where(Agent.id == agent_id))
+            await session.commit()
