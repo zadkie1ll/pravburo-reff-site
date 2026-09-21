@@ -246,7 +246,7 @@ async def test_update_deal_stage_ignores_untracked_stage(monkeypatch) -> None:
             await session.commit()
 
 
-async def test_update_deal_stage_remembers_pre_contract_stage_and_resets_on_return(
+async def test_update_deal_stage_remembers_sales_stages_and_ignores_untracked_funnel_2(
     monkeypatch,
 ) -> None:
     settings = get_settings()
@@ -275,20 +275,23 @@ async def test_update_deal_stage_remembers_pre_contract_stage_and_resets_on_retu
 
     try:
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            await post(client, "UC_Q6ZN5G")  # "Думает"
+            assert await stored_stage() == "UC_Q6ZN5G"
+
             await post(client, "UC_1BEALQ")  # "Ушли в игнор"
             assert await stored_stage() == "UC_1BEALQ"
 
-            await post(client, "UC_6IE5TH")  # "Возврат на первую линию" - снова в работе
-            assert await stored_stage() is None
+            await post(client, "UC_6IE5TH")  # "Возврат на первую линию": просто новая стадия
+            assert await stored_stage() == "UC_6IE5TH"
 
             await post(client, "UC_4FX5NE")  # "Договор составлен, ждём оплату"
             assert await stored_stage() == "UC_4FX5NE"
 
-            # Переход в воронку "Сопровождение" на стадию вне ТЗ не стирает запомненную стадию.
+            # Стадия воронки "Сопровождение" вне ТЗ не стирает то, что уже запомнено.
             await post(client, "C2:UC_M5ONI8")
             assert await stored_stage() == "UC_4FX5NE"
 
-        assert pushed == []  # по стадиям до договора push не шлём
+        assert pushed == []  # по стадиям продаж push не шлём
     finally:
         async with session_factory() as session:
             await session.execute(

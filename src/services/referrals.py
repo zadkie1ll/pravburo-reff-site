@@ -18,7 +18,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.security import masked_phone, normalize_phone
-from src.services.deal_stages import DEFAULT_STAGE_LABEL, stage_label
+from src.services.deal_stages import DEFAULT_STAGE_LABEL, application_status_label, stage_label
 from src.services.payouts import (
     REWARD_TYPE_LABELS,
     STATUS_LABELS,
@@ -92,6 +92,34 @@ async def get_visits_by_day(session: AsyncSession, agent_id: int) -> list[VisitD
         .order_by(day.desc())
     )
     return [VisitDay(day=visit_day, count=count) for visit_day, count in rows.all()]
+
+
+@dataclass(frozen=True, slots=True)
+class ApplicationRow:
+    client_name: str
+    masked_phone: str
+    created_at: datetime
+    status: str
+
+
+async def get_application_rows(session: AsyncSession, agent_id: int) -> list[ApplicationRow]:
+    """Все заявки, оставленные по ссылке агента, с понятным статусом из Bitrix."""
+    applications = (
+        await session.scalars(
+            select(ReferralApplication)
+            .where(ReferralApplication.agent_id == agent_id)
+            .order_by(ReferralApplication.created_at.desc())
+        )
+    ).all()
+    return [
+        ApplicationRow(
+            client_name=application.full_name,
+            masked_phone=masked_phone(application.phone_normalized),
+            created_at=application.created_at,
+            status=application_status_label(application.deal_stage_code),
+        )
+        for application in applications
+    ]
 
 
 @dataclass(frozen=True, slots=True)

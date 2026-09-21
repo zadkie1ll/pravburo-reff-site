@@ -21,6 +21,7 @@ from src.services.protection import rate_limiter, verify_turnstile
 from src.services.referrals import (
     ApplicationInput,
     create_first_application,
+    get_application_rows,
     get_link_stats,
     get_network_client_rows,
     get_visits_by_day,
@@ -68,6 +69,18 @@ async def cabinet_visits(request: Request, agent: CurrentAgent, session: Session
         request=request,
         name="visits.html",
         context={"agent": agent, "days": days, "total": sum(day.count for day in days)},
+    )
+
+
+@router.get("/cabinet/applications", response_class=HTMLResponse)
+async def cabinet_applications(request: Request, agent: CurrentAgent, session: Session):
+    if agent.role == AgentRole.ADMIN:
+        return RedirectResponse("/admin", status_code=303)
+    rows = await get_application_rows(session, agent.id)
+    return templates.TemplateResponse(
+        request=request,
+        name="applications.html",
+        context={"agent": agent, "rows": rows},
     )
 
 

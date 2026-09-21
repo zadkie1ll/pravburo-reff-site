@@ -11,7 +11,7 @@ from src.core.email import send_reward_notice
 from src.core.internal_auth import require_internal_token
 from src.core.push import send_push_notice
 from src.core.telegram import send_partner_notice
-from src.services.deal_stages import PAYOUT_STAGE_LABELS, is_funnel_2_stage, stage_label
+from src.services.deal_stages import is_funnel_2_stage, stage_label
 from src.services.payouts import REWARD_TYPE_LABELS, format_amount
 
 logger = logging.getLogger(__name__)
@@ -37,16 +37,11 @@ async def update_deal_stage(
     application.bitrix_deal_id = payload.deal_id
     new_label = stage_label(payload.stage_code)
     if new_label is None:
-        # Стадия вне списка этапов ТЗ: партнёру этап не показываем, push не шлём.
-        # Стадии до договора ("Оплата депозита", "Ушел в игнор") запоминаем для "Выплат".
-        if payload.stage_code in PAYOUT_STAGE_LABELS:
+        # Стадия воронки "Сопровождение" вне списка этапов ТЗ: партнёру ничего не меняем.
+        # Любую стадию воронки "Основная" запоминаем: по ней строятся "Выплаты" и список
+        # заявок. Push по таким стадиям не отправляется.
+        if not is_funnel_2_stage(payload.stage_code):
             application.deal_stage_code = payload.stage_code
-        elif (
-            not is_funnel_2_stage(payload.stage_code)
-            and application.deal_stage_code in PAYOUT_STAGE_LABELS
-        ):
-            # Клиент вернулся в обычную работу воронки продаж: снова "Анализ ситуации".
-            application.deal_stage_code = None
         await session.commit()
         return {"status": "ignored"}
 
