@@ -241,7 +241,7 @@ async def preview_page(request: Request, page: str, token: PreviewToken) -> HTML
                 "referral_url": data["referral_url"],
                 "qr_url": data["qr_url"],
                 "bounty_admin_url": get_settings().bounty_admin_url,
-                "link_stats": LinkStats(visits=48, applications=2),
+                "link_stats": LinkStats(visits=48, applications=2, contracts=1),
                 "network_client_rows": network_client_rows,
                 "finance": FinanceSummary(
                     total_paid_label="18 000 ₽",

@@ -11,6 +11,8 @@ from pravburo_ref_common.models import (
     ReferralApplication,
     ReferralLinkVisit,
     Reward,
+    RewardStatus,
+    RewardType,
 )
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,6 +40,7 @@ async def record_link_visit(session: AsyncSession, agent_id: int) -> None:
 class LinkStats:
     visits: int
     applications: int
+    contracts: int = 0
 
     @property
     def conversion_rate_label(self) -> str:
@@ -57,7 +60,16 @@ async def get_link_stats(session: AsyncSession, agent_id: int) -> LinkStats:
         .select_from(ReferralApplication)
         .where(ReferralApplication.agent_id == agent_id)
     )
-    return LinkStats(visits=visits or 0, applications=applications or 0)
+    # Договор заключён, когда клиент попал в воронку "Сопровождение": за это начисляется
+    # аванс. Отклонённые авансы не считаем, один клиент - один договор.
+    contracts = await session.scalar(
+        select(func.count(func.distinct(Reward.application_id))).where(
+            Reward.agent_id == agent_id,
+            Reward.reward_type == RewardType.ADVANCE,
+            Reward.status != RewardStatus.REJECTED,
+        )
+    )
+    return LinkStats(visits=visits or 0, applications=applications or 0, contracts=contracts or 0)
 
 
 @dataclass(frozen=True, slots=True)
