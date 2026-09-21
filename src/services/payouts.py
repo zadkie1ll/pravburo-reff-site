@@ -52,6 +52,7 @@ class PayoutRow:
     status_slug: str
     amount_label: str
     payout_date_label: str
+    rejection_reason: str = ""
 
 
 async def get_payout_rows(
@@ -92,6 +93,7 @@ async def get_payout_rows(
                 status_slug=slug,
                 amount_label=format_amount(reward.amount),
                 payout_date_label=reward.paid_at.strftime("%d.%m.%Y") if reward.paid_at else "—",
+                rejection_reason=(reward.rejection_reason or "") if slug == "rejected" else "",
             )
         )
     return result

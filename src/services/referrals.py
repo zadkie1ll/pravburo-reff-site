@@ -2,6 +2,7 @@ import logging
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from typing import Protocol
 
 from pravburo_ref_common.models import (
@@ -15,6 +16,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.security import masked_phone, normalize_phone
+from src.services.deal_stages import DEFAULT_STAGE_LABEL, stage_label
 from src.services.payouts import (
     REWARD_TYPE_LABELS,
     STATUS_LABELS,
@@ -67,6 +69,29 @@ class NetworkClientRow:
     masked_phone: str
     created_at: datetime
     reward_summary: str
+    stage: str
+    reward_totals: str
+
+
+def _reward_totals(rewards: list[Reward]) -> str:
+    """Итог по клиенту (ТЗ): сколько выплачено и сколько ещё ожидается.
+    Отклонённые начисления в сумму не входят."""
+    paid = Decimal(0)
+    expected = Decimal(0)
+    for reward in rewards:
+        if reward.amount is None:
+            continue
+        slug = payout_status_slug(reward)
+        if slug == "paid":
+            paid += reward.amount
+        elif slug in ("pending", "scheduled"):
+            expected += reward.amount
+    if not paid and not expected:
+        return "—"
+    # Неразрывные пробелы: строка может переноситься только между "выплачено" и "ожидается".
+    paid_label = f"Выплачено: {format_amount(paid)}".replace(" ", "\u00a0")
+    expected_label = f"Ожидается: {format_amount(expected)}".replace(" ", "\u00a0")
+    return f"{paid_label} · {expected_label}"
 
 
 async def get_network_client_rows(session: AsyncSession, agent_id: int) -> list[NetworkClientRow]:
@@ -119,6 +144,8 @@ async def get_network_client_rows(session: AsyncSession, agent_id: int) -> list[
                 for r in rewards_by_application.get(application.id, [])
             )
             or "Договор не заключен",
+            stage=stage_label(application.deal_stage_code) or DEFAULT_STAGE_LABEL,
+            reward_totals=_reward_totals(rewards_by_application.get(application.id, [])),
         )
         for application in applications
     ]

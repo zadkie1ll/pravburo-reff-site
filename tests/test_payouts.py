@@ -182,3 +182,33 @@ def test_payouts_export_pdf_returns_pdf(client) -> None:
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/pdf"
     assert response.content.startswith(b"%PDF")
+
+
+def test_payouts_page_shows_reason_only_for_rejected(client) -> None:
+    from src.web.dependencies import require_agent
+
+    agent = SimpleNamespace(id=1)
+    rejected = _reward(
+        reward_type=RewardType.ADVANCE,
+        status=RewardStatus.REJECTED,
+        amount=Decimal("3000"),
+        rejection_reason="Не удалось связаться с клиентом",
+    )
+    pending = _reward(
+        reward_type=RewardType.MAIN,
+        status=RewardStatus.PENDING,
+        amount=Decimal("10000"),
+        rejection_reason="Причина, которую агенту показывать нельзя",
+    )
+    _override_agent_and_rewards(agent, [(rejected, "Иван Иванов"), (pending, "Пётр Петров")])
+
+    try:
+        response = client.get("/payouts")
+    finally:
+        app.dependency_overrides.pop(require_agent, None)
+        app.dependency_overrides.pop(get_session, None)
+
+    assert response.status_code == 200
+    assert "Отклонено" in response.text
+    assert "Не удалось связаться с клиентом" in response.text
+    assert "Причина, которую агенту показывать нельзя" not in response.text

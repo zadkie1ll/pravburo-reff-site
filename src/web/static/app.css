@@ -248,6 +248,8 @@ td form { display: grid; gap: 9px; min-width: 230px; }
 /* CSP sets style-src 'self' (no 'unsafe-inline'), so inline style="" attributes
    are silently dropped by the browser - use these utility classes instead. */
 .mt-14 { margin-top: 14px; }
+.nowrap { white-space: nowrap; }
+.reason-note { display: inline-block; margin-top: 6px; color: var(--muted); font-size: 13px; }
 .mt-20 { margin-top: 20px; }
 .inline-form { display: inline; }
 

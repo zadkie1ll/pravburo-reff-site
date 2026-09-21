@@ -34,13 +34,19 @@ async def update_deal_stage(
     if application is None:
         raise HTTPException(status_code=404, detail="Application not found")
 
-    previous_stage_code = application.deal_stage_code
     application.bitrix_deal_id = payload.deal_id
+    new_label = stage_label(payload.stage_code)
+    if new_label is None:
+        # Стадия вне списка этапов ТЗ: партнёру ничего не показываем и не пишем.
+        await session.commit()
+        return {"status": "ignored"}
+
+    previous_stage_code = application.deal_stage_code
     application.deal_stage_code = payload.stage_code
     await session.commit()
 
     if payload.stage_code != previous_stage_code:
-        message = f"Ваш клиент перешёл на новый этап: {stage_label(payload.stage_code)}"
+        message = f"Ваш клиент перешёл на новый этап: {new_label}"
         try:
             await send_push_notice(session, application.agent_id, "Статус дела изменился", message)
         except Exception:

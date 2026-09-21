@@ -110,7 +110,7 @@ async def test_update_deal_stage_pushes_only_on_actual_change(monkeypatch) -> No
                 json={
                     "application_id": application_id,
                     "deal_id": "555",
-                    "stage_code": "C10:PREPARATION",
+                    "stage_code": "C2:NEW",
                 },
             )
             assert first.status_code == 200
@@ -124,7 +124,7 @@ async def test_update_deal_stage_pushes_only_on_actual_change(monkeypatch) -> No
                 json={
                     "application_id": application_id,
                     "deal_id": "555",
-                    "stage_code": "C10:PREPARATION",
+                    "stage_code": "C2:NEW",
                 },
             )
             assert repeated.status_code == 200
@@ -137,7 +137,7 @@ async def test_update_deal_stage_pushes_only_on_actual_change(monkeypatch) -> No
                 json={
                     "application_id": application_id,
                     "deal_id": "555",
-                    "stage_code": "C10:EXECUTING",
+                    "stage_code": "C2:UC_0Y0VBU",
                 },
             )
             assert second.status_code == 200
@@ -173,13 +173,70 @@ async def test_update_deal_stage_sends_telegram_notice(monkeypatch) -> None:
                 json={
                     "application_id": application_id,
                     "deal_id": "555",
-                    "stage_code": "C10:LOSE",
+                    "stage_code": "C2:UC_7TR7XT",
                 },
             )
             assert response.status_code == 200
             assert len(notified) == 1
             assert notified[0][0] == agent_id
-            assert "довести дело до конца не получилось" in notified[0][1]
+            assert "Процедура завершена" in notified[0][1]
+    finally:
+        async with session_factory() as session:
+            await session.execute(
+                delete(ReferralApplication).where(ReferralApplication.id == application_id)
+            )
+            await session.execute(delete(Agent).where(Agent.id == agent_id))
+            await session.commit()
+
+
+async def test_update_deal_stage_ignores_untracked_stage(monkeypatch) -> None:
+    settings = get_settings()
+    monkeypatch.setattr(settings, "internal_service_token", "test-token")
+
+    pushed: list[tuple] = []
+    notified: list[tuple] = []
+
+    async def fake_push(session, agent_id, title, body):
+        pushed.append((agent_id, title, body))
+
+    async def fake_partner_notice(session, agent_id, message):
+        notified.append((agent_id, message))
+
+    monkeypatch.setattr(internal_route, "send_push_notice", fake_push)
+    monkeypatch.setattr(internal_route, "send_partner_notice", fake_partner_notice)
+
+    async with session_factory() as session:
+        agent_id, application_id = await _make_application(session)
+
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            tracked = await client.post(
+                f"/internal/applications/{application_id}/stage",
+                headers={"X-Internal-Token": "test-token"},
+                json={"application_id": application_id, "deal_id": "555", "stage_code": "C2:NEW"},
+            )
+            assert tracked.status_code == 200
+            assert len(pushed) == 1
+
+            # "Сбор документов" не входит в этапы ТЗ: этап не меняется, push не идёт.
+            untracked = await client.post(
+                f"/internal/applications/{application_id}/stage",
+                headers={"X-Internal-Token": "test-token"},
+                json={
+                    "application_id": application_id,
+                    "deal_id": "555",
+                    "stage_code": "C2:UC_M5ONI8",
+                },
+            )
+            assert untracked.status_code == 200
+            assert untracked.json() == {"status": "ignored"}
+            assert len(pushed) == 1
+            assert len(notified) == 1
+
+        async with session_factory() as session:
+            updated = await session.get(ReferralApplication, application_id)
+            assert updated.deal_stage_code == "C2:NEW"
+            assert updated.bitrix_deal_id == "555"
     finally:
         async with session_factory() as session:
             await session.execute(
