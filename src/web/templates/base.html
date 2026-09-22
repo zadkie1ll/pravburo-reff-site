@@ -25,6 +25,9 @@
       <nav class="main-nav" id="main-nav" aria-label="Основная навигация">
         {% if onboarding %}
         <a href="/faq">Как это работает</a>
+        {% elif request.session.get('role') == 'admin' %}
+        <a href="/admin">Админ-панель</a>
+        <a href="/faq">Как это работает</a>
         {% elif request.session.get('agent_id') or preview_mode %}
         <a href="/cabinet">Главная</a>
         <a href="/payouts">Выплаты</a>
@@ -45,7 +48,9 @@
           <span class="brand-copy"><strong>Правбюро</strong><small>Агентская программа</small></span>
         </a>
         <nav class="footer-nav" aria-label="Навигация в подвале">
-          {% if (request.session.get('agent_id') or preview_mode) and not onboarding %}
+          {% if request.session.get('role') == 'admin' %}
+          <a href="/admin">Админ-панель</a>
+          {% elif (request.session.get('agent_id') or preview_mode) and not onboarding %}
           <a href="/cabinet">Главная</a>
           <a href="/payouts">Выплаты</a>
           {% endif %}
