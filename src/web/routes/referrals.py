@@ -16,6 +16,13 @@ from src.core.email import send_referral_accepted_notice
 from src.core.push import send_push_notice
 from src.core.security import csrf_token
 from src.core.telegram import send_new_referral_notice, send_partner_notice
+from src.services.partner_levels import (
+    LEVEL_LABELS,
+    LEVEL_MIN_CONTRACTS,
+    LEVEL_RANGE_LABELS,
+    contracts_word,
+    get_current_month_progress,
+)
 from src.services.payouts import build_finance_summary
 from src.services.protection import rate_limiter, verify_turnstile
 from src.services.referrals import (
@@ -45,6 +52,7 @@ async def cabinet(request: Request, agent: CurrentAgent, session: Session):
     stats = await get_link_stats(session, agent.id)
     client_rows = await get_network_client_rows(session, agent.id)
     finance = build_finance_summary(list(all_rewards))
+    level_progress = await get_current_month_progress(session, agent.id)
     return templates.TemplateResponse(
         request=request,
         name="agent_dashboard.html",
@@ -55,6 +63,11 @@ async def cabinet(request: Request, agent: CurrentAgent, session: Session):
             "link_stats": stats,
             "network_client_rows": client_rows,
             "finance": finance,
+            "level_progress": level_progress,
+            "level_labels": LEVEL_LABELS,
+            "level_min_contracts": LEVEL_MIN_CONTRACTS,
+            "level_range_labels": LEVEL_RANGE_LABELS,
+            "contracts_word": contracts_word,
             "csrf_token": csrf_token(request.session),
         },
     )

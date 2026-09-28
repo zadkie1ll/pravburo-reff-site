@@ -169,6 +169,16 @@ async def send_backup_failed_notice(reason: str) -> None:
     await _send_admin_notice(build_backup_failed_message(reason))
 
 
+def build_partner_level_close_failed_message(period: str) -> str:
+    return "\n".join(
+        [f"Расчёт уровней партнёров за {period} не выполнился", "Нужна проверка логов"]
+    )
+
+
+async def send_partner_level_close_failed_notice(period: str) -> None:
+    await _send_admin_notice(build_partner_level_close_failed_message(period))
+
+
 def build_new_partner_message(agent: Agent) -> str:
     return "\n".join(
         [

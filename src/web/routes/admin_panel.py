@@ -44,6 +44,11 @@ SECTIONS = [
         "url": "/admin/reward-rates",
     },
     {
+        "title": "Уровни партнёров",
+        "description": "Просмотр и ручная правка уровня партнёра (Старт/Актив/Про/Эксперт).",
+        "url": "/admin/partner-levels",
+    },
+    {
         "title": "Материалы",
         "description": "Вопросы и ответы на странице «Как это работает».",
         "url": "/admin/faq",

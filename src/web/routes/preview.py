@@ -12,6 +12,13 @@ from fastapi.responses import HTMLResponse, Response
 from pravburo_ref_common.models import EmploymentFormat
 
 from src.core.config import get_settings
+from src.services.partner_levels import (
+    LEVEL_LABELS,
+    LEVEL_MIN_CONTRACTS,
+    LEVEL_RANGE_LABELS,
+    build_level_progress,
+    contracts_word,
+)
 from src.services.payouts import (
     PAGE_STATUS_LABELS,
     REWARD_TYPE_LABELS,
@@ -255,6 +262,11 @@ async def preview_page(request: Request, page: str, token: PreviewToken) -> HTML
                         PendingGroup(label="Ждём выплаты", amount_label="10 000 ₽"),
                     ],
                 ),
+                "level_progress": build_level_progress(3),
+                "level_labels": LEVEL_LABELS,
+                "level_min_contracts": LEVEL_MIN_CONTRACTS,
+                "level_range_labels": LEVEL_RANGE_LABELS,
+                "contracts_word": contracts_word,
             },
         ),
         "success": ("referral_success.html", {}),
