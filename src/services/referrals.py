@@ -177,6 +177,8 @@ async def get_network_client_rows(session: AsyncSession, agent_id: int) -> list[
     rewards = list((await session.scalars(select(Reward).where(Reward.agent_id == agent_id))).all())
     rewards_by_application: dict[int, list[Reward]] = defaultdict(list)
     for reward in rewards:
+        if reward.application_id is None:
+            continue  # квартальный бонус не привязан к клиенту — строки клиента у него нет
         rewards_by_application[reward.application_id].append(reward)
 
     direct_application_ids = {application.id for application in direct_applications}

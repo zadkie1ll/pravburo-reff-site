@@ -102,7 +102,7 @@ async def list_payout_rows(
 
     stmt = (
         select(Reward, ReferralApplication.full_name, Agent.display_name, Agent.email)
-        .join(ReferralApplication, ReferralApplication.id == Reward.application_id)
+        .outerjoin(ReferralApplication, ReferralApplication.id == Reward.application_id)
         .join(Agent, Agent.id == Reward.agent_id)
         .order_by(Reward.created_at.desc())
     )
@@ -117,7 +117,7 @@ async def list_payout_rows(
             PayoutRow(
                 reward=reward,
                 agent_name=agent_display_name or agent_email or f"#{reward.agent_id}",
-                client_name=client_name,
+                client_name=client_name or "—",
                 type_label=REWARD_TYPE_LABELS.get(reward.reward_type, reward.reward_type.value),
                 amount_label=format_amount(reward.amount),
                 status_slug=slug,

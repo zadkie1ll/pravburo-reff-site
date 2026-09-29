@@ -80,7 +80,7 @@ async def get_payout_rows(
 ) -> list[PayoutRow]:
     statement = (
         select(Reward, ReferralApplication.full_name)
-        .join(ReferralApplication, ReferralApplication.id == Reward.application_id)
+        .outerjoin(ReferralApplication, ReferralApplication.id == Reward.application_id)
         .where(Reward.agent_id == agent_id)
         .order_by(Reward.created_at.desc())
     )
@@ -109,7 +109,7 @@ async def get_payout_rows(
         result.append(
             PayoutRow(
                 reward=reward,
-                client_name=full_name,
+                client_name=full_name or "—",
                 type_label=REWARD_TYPE_LABELS.get(reward.reward_type, reward.reward_type.value),
                 status_label=PAGE_STATUS_LABELS[slug],
                 status_slug=slug,

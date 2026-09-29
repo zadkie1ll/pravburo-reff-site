@@ -20,7 +20,7 @@ async def check_payout_reminders() -> None:
 
         stmt = (
             select(Reward, ReferralApplication.full_name, Agent)
-            .join(ReferralApplication, ReferralApplication.id == Reward.application_id)
+            .outerjoin(ReferralApplication, ReferralApplication.id == Reward.application_id)
             .join(Agent, Agent.id == Reward.agent_id)
             .where(
                 Reward.status == RewardStatus.APPROVED,
@@ -31,6 +31,7 @@ async def check_payout_reminders() -> None:
         rows = (await session.execute(stmt)).all()
 
         for reward, client_name, agent in rows:
+            client_name = client_name or "—"
             target_date = reward.decided_at.date() + timedelta(days=overdue_days)
 
             if reward.due_notice_sent_at is None and today >= target_date:
@@ -45,10 +46,7 @@ async def check_payout_reminders() -> None:
                     await session.commit()
 
             days_overdue = (today - target_date).days
-            if (
-                reward.overdue_notice_sent_at is None
-                and days_overdue > OVERDUE_ALERT_AFTER_DAYS
-            ):
+            if reward.overdue_notice_sent_at is None and days_overdue > OVERDUE_ALERT_AFTER_DAYS:
                 try:
                     await send_payout_overdue_notice(
                         reward, agent, client_name, target_date, days_overdue
