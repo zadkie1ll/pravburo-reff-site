@@ -402,3 +402,81 @@ async def test_get_current_month_progress_counts_only_current_month() -> None:
 )
 def test_contracts_word(count, expected_word) -> None:
     assert contracts_word(count) == expected_word
+
+
+def test_build_level_progress_override_ignores_contracts_count() -> None:
+    progress = build_level_progress(0, level_override=PartnerLevel.PRO)
+
+    assert progress.level == PartnerLevel.PRO
+    assert progress.is_manual is True
+    assert [segment.fill_percent for segment in progress.segments] == [100, 100, 0]
+    assert [node.is_reached for node in progress.nodes] == [True, True, True, False]
+    assert [node.is_current for node in progress.nodes] == [False, False, True, False]
+    assert progress.next_level == PartnerLevel.EXPERT
+    assert progress.contracts_to_next is None
+
+
+def test_build_level_progress_without_override_marks_current_node() -> None:
+    progress = build_level_progress(3)
+
+    assert progress.is_manual is False
+    assert [node.is_reached for node in progress.nodes] == [True, True, False, False]
+    assert [node.is_current for node in progress.nodes] == [False, True, False, False]
+
+
+async def test_get_current_month_progress_uses_manual_override_when_present() -> None:
+    marker = uuid.uuid4().hex[:8]
+    now = datetime.now(MOSCOW_TZ)
+    async with session_factory() as session:
+        agent = Agent(email=f"{marker}@example.test", display_name=f"Партнёр{marker}")
+        session.add(agent)
+        await session.flush()
+        application = ReferralApplication(
+            agent_id=agent.id,
+            full_name=f"Клиент{marker}",
+            phone_normalized=f"+7999{uuid.uuid4().int % 10**7:07d}",
+        )
+        session.add(application)
+        await session.flush()
+        # Live count would say ACTIVE (2 contracts) - the manual override below
+        # must win instead, exactly the bug this test guards against.
+        for _ in range(2):
+            session.add(
+                Reward(
+                    deal_id=f"deal-{marker}-{uuid.uuid4().hex[:8]}",
+                    application_id=application.id,
+                    agent_id=agent.id,
+                    reward_type=RewardType.ADVANCE,
+                    amount=Decimal("3000.00"),
+                    created_at=now,
+                )
+            )
+        session.add(
+            PartnerLevelMonth(
+                agent_id=agent.id,
+                year=now.year,
+                month=now.month,
+                contracts_count=0,
+                level=PartnerLevel.EXPERT,
+                is_manual=True,
+            )
+        )
+        await session.commit()
+        agent_id = agent.id
+
+    try:
+        async with session_factory() as session:
+            progress = await get_current_month_progress(session, agent_id)
+        assert progress.level == PartnerLevel.EXPERT
+        assert progress.is_manual is True
+    finally:
+        async with session_factory() as session:
+            await session.execute(delete(Reward).where(Reward.agent_id == agent_id))
+            await session.execute(
+                delete(PartnerLevelMonth).where(PartnerLevelMonth.agent_id == agent_id)
+            )
+            await session.execute(
+                delete(ReferralApplication).where(ReferralApplication.agent_id == agent_id)
+            )
+            await session.execute(delete(Agent).where(Agent.id == agent_id))
+            await session.commit()

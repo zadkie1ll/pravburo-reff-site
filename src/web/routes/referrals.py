@@ -18,7 +18,6 @@ from src.core.security import csrf_token
 from src.core.telegram import send_new_referral_notice, send_partner_notice
 from src.services.partner_levels import (
     LEVEL_LABELS,
-    LEVEL_MIN_CONTRACTS,
     LEVEL_RANGE_LABELS,
     contracts_word,
     get_current_month_progress,
@@ -65,7 +64,6 @@ async def cabinet(request: Request, agent: CurrentAgent, session: Session):
             "finance": finance,
             "level_progress": level_progress,
             "level_labels": LEVEL_LABELS,
-            "level_min_contracts": LEVEL_MIN_CONTRACTS,
             "level_range_labels": LEVEL_RANGE_LABELS,
             "contracts_word": contracts_word,
             "csrf_token": csrf_token(request.session),

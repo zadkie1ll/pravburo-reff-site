@@ -14,7 +14,6 @@ from pravburo_ref_common.models import EmploymentFormat
 from src.core.config import get_settings
 from src.services.partner_levels import (
     LEVEL_LABELS,
-    LEVEL_MIN_CONTRACTS,
     LEVEL_RANGE_LABELS,
     build_level_progress,
     contracts_word,
@@ -264,7 +263,6 @@ async def preview_page(request: Request, page: str, token: PreviewToken) -> HTML
                 ),
                 "level_progress": build_level_progress(3),
                 "level_labels": LEVEL_LABELS,
-                "level_min_contracts": LEVEL_MIN_CONTRACTS,
                 "level_range_labels": LEVEL_RANGE_LABELS,
                 "contracts_word": contracts_word,
             },

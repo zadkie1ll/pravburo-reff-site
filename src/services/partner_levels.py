@@ -90,58 +90,114 @@ class LevelSegment:
 
 
 @dataclass(frozen=True, slots=True)
+class LevelNode:
+    level: PartnerLevel
+    is_reached: bool
+    is_current: bool
+
+
+@dataclass(frozen=True, slots=True)
 class LevelProgress:
     level: PartnerLevel
     contracts_count: int
     segments: list[LevelSegment]
+    nodes: list[LevelNode]
     next_level: PartnerLevel | None
     contracts_to_next: int | None
+    is_manual: bool = False
 
 
 def _quantize_to_ten(fraction: float) -> int:
     return max(0, min(100, round(fraction * 10) * 10))
 
 
-def build_level_progress(contracts_count: int) -> LevelProgress:
-    level = level_for_contracts(contracts_count)
-    segments = [
-        LevelSegment(
-            from_level=LEVEL_ORDER[index],
-            to_level=LEVEL_ORDER[index + 1],
-            fill_percent=_quantize_to_ten(
-                (contracts_count - LEVEL_MIN_CONTRACTS[LEVEL_ORDER[index]])
-                / (
-                    LEVEL_MIN_CONTRACTS[LEVEL_ORDER[index + 1]]
-                    - LEVEL_MIN_CONTRACTS[LEVEL_ORDER[index]]
-                )
-            ),
-        )
-        for index in range(len(LEVEL_ORDER) - 1)
-    ]
+def build_level_progress(
+    contracts_count: int, *, level_override: PartnerLevel | None = None
+) -> LevelProgress:
+    """`level_override` forces the level shown regardless of `contracts_count`
+    - used when an admin has manually corrected the current month's level at
+    /admin/partner-levels, so the cabinet must reflect that instead of the
+    auto-computed value. The track then reflects the override too: segments
+    up to it read as complete, later ones empty, since contracts_count no
+    longer explains the shown level.
+    """
+    level = level_override if level_override is not None else level_for_contracts(contracts_count)
     level_index = LEVEL_ORDER.index(level)
+
+    if level_override is not None:
+        segments = [
+            LevelSegment(
+                from_level=LEVEL_ORDER[index],
+                to_level=LEVEL_ORDER[index + 1],
+                fill_percent=100 if index < level_index else 0,
+            )
+            for index in range(len(LEVEL_ORDER) - 1)
+        ]
+    else:
+        segments = [
+            LevelSegment(
+                from_level=LEVEL_ORDER[index],
+                to_level=LEVEL_ORDER[index + 1],
+                fill_percent=_quantize_to_ten(
+                    (contracts_count - LEVEL_MIN_CONTRACTS[LEVEL_ORDER[index]])
+                    / (
+                        LEVEL_MIN_CONTRACTS[LEVEL_ORDER[index + 1]]
+                        - LEVEL_MIN_CONTRACTS[LEVEL_ORDER[index]]
+                    )
+                ),
+            )
+            for index in range(len(LEVEL_ORDER) - 1)
+        ]
+
     if level_index + 1 < len(LEVEL_ORDER):
         next_level = LEVEL_ORDER[level_index + 1]
-        contracts_to_next = LEVEL_MIN_CONTRACTS[next_level] - contracts_count
+        contracts_to_next = (
+            None
+            if level_override is not None
+            else LEVEL_MIN_CONTRACTS[next_level] - contracts_count
+        )
     else:
         next_level = None
         contracts_to_next = None
+    nodes = [
+        LevelNode(level=node_level, is_reached=index <= level_index, is_current=node_level == level)
+        for index, node_level in enumerate(LEVEL_ORDER)
+    ]
     return LevelProgress(
         level=level,
         contracts_count=contracts_count,
         segments=segments,
+        nodes=nodes,
         next_level=next_level,
         contracts_to_next=contracts_to_next,
+        is_manual=level_override is not None,
     )
 
 
 async def get_current_month_progress(session: AsyncSession, agent_id: int) -> LevelProgress:
-    """Live progress for the cabinet widget - unlike PartnerLevelMonth, this
-    reads the CURRENT (still open) month's contracts, so it moves as new
-    contracts come in. It's a preview, not the fixed level used for payouts,
-    which is only set once run_monthly_level_close closes the month.
+    """Live progress for the cabinet widget - unlike a closed month's
+    PartnerLevelMonth row, this normally reads the CURRENT (still open)
+    month's contracts fresh each time, so it moves as new contracts come in.
+    The one exception: if an admin already hand-set this month's level at
+    /admin/partner-levels (is_manual), that overrides the live computation -
+    otherwise a manual correction would never show up for the partner.
     """
     today = datetime.now(MOSCOW_TZ)
-    start, end = _month_bounds(today.year, today.month)
+    year, month = today.year, today.month
+    manual_override = await session.scalar(
+        select(PartnerLevelMonth).where(
+            PartnerLevelMonth.agent_id == agent_id,
+            PartnerLevelMonth.year == year,
+            PartnerLevelMonth.month == month,
+            PartnerLevelMonth.is_manual.is_(True),
+        )
+    )
+    if manual_override is not None:
+        return build_level_progress(
+            manual_override.contracts_count, level_override=manual_override.level
+        )
+
+    start, end = _month_bounds(year, month)
     counts = await _count_contracts_by_agent(session, start, end)
     return build_level_progress(counts.get(agent_id, 0))
 
