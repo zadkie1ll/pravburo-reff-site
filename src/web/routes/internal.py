@@ -21,6 +21,9 @@ Session = Annotated[AsyncSession, Depends(get_session)]
 REWARD_NOTICE_TEXT = {
     RewardType.ADVANCE: "Клиент подписал договор — вам начислен аванс: {amount}.",
     RewardType.MAIN: "Клиент оплатил депозит — вам начислена основная выплата: {amount}.",
+    RewardType.BONUS_FULL_PAYMENT: (
+        "Клиент оплатил 100% суммы сразу — вам начислен бонус: {amount}."
+    ),
 }
 
 

@@ -74,6 +74,48 @@ async def test_notify_reward_sends_email_push_and_telegram(monkeypatch) -> None:
             await session.commit()
 
 
+async def test_notify_reward_bonus_full_payment_has_its_own_text(monkeypatch) -> None:
+    settings = get_settings()
+    monkeypatch.setattr(settings, "internal_service_token", "test-token")
+
+    async with session_factory() as session:
+        agent = Agent(email=f"{uuid.uuid4()}@example.test")
+        session.add(agent)
+        await session.commit()
+        agent_id = agent.id
+
+    sent_telegram: list[tuple] = []
+
+    async def fake_noop(*args, **kwargs):
+        return None
+
+    async def fake_telegram(session, agent_id, message):
+        sent_telegram.append((agent_id, message))
+
+    monkeypatch.setattr(internal_route, "send_reward_notice", fake_noop)
+    monkeypatch.setattr(internal_route, "send_push_notice", fake_noop)
+    monkeypatch.setattr(internal_route, "send_partner_notice", fake_telegram)
+
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.post(
+                "/internal/rewards/notify",
+                headers={"X-Internal-Token": "test-token"},
+                json={
+                    "agent_id": agent_id,
+                    "reward_type": "bonus_full_payment",
+                    "amount": "3000.00",
+                },
+            )
+        assert response.status_code == 200
+        assert len(sent_telegram) == 1
+        assert "100%" in sent_telegram[0][1]
+    finally:
+        async with session_factory() as session:
+            await session.execute(delete(Agent).where(Agent.id == agent_id))
+            await session.commit()
+
+
 async def test_notify_reward_ignores_non_notifiable_type(monkeypatch) -> None:
     settings = get_settings()
     monkeypatch.setattr(settings, "internal_service_token", "test-token")
