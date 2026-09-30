@@ -1,0 +1,28 @@
+.footer-actions {
+  display: flex;
+  margin-top: 26px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+.footer-actions a,
+.back-link a {
+  color: var(--brand);
+  font-family: "Gilroy Light", sans-serif;
+  font-weight: 500;
+  text-decoration: none;
+}
+.footer-actions a:hover,
+.back-link a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.back-link {
+  margin-top: 25px;
+}
+
+@media (max-width: 620px) {
+  .footer-actions {
+    display: grid;
+  }
+}

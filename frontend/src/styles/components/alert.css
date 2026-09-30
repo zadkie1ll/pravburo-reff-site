@@ -1,0 +1,15 @@
+.alert,
+.notice-success {
+  margin: 18px 0;
+  padding: 13px 15px;
+  border-radius: 12px;
+  font-weight: 600;
+}
+.alert {
+  color: #8c2831;
+  background: #feecef;
+}
+.notice-success {
+  color: var(--success);
+  background: #e7f7ed;
+}

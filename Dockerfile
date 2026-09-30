@@ -1,5 +1,12 @@
 FROM ghcr.io/astral-sh/uv:latest AS uv
 
+FROM node:22-slim AS frontend
+WORKDIR /frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend ./
+RUN npm run build
+
 FROM python:3.13-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
 WORKDIR /app
@@ -20,6 +27,7 @@ COPY pyproject.toml uv.lock README.md ./
 COPY common ./common
 RUN uv sync --frozen --no-dev --no-install-project
 COPY src ./src
+COPY --from=frontend /frontend/dist ./frontend/dist
 RUN groupadd --system app && useradd --system --gid app --home-dir /app app \
     && chown -R app:app /app
 USER app

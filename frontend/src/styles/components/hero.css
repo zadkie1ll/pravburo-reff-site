@@ -1,0 +1,72 @@
+.hero {
+  max-width: 780px;
+  margin: 0 0 38px;
+}
+.hero.hero-wide {
+  max-width: none;
+}
+.hero.compact {
+  margin: clamp(70px, 12vh, 130px) 0;
+}
+.hero h1,
+.auth-card h1,
+.not-found h1 {
+  margin: 0;
+  color: #33475c;
+  font-size: clamp(36px, 5vw, 58px);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+}
+.hero-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  gap: 24px;
+}
+.hero-header-row h1 {
+  font-size: clamp(28px, 3.2vw, 40px);
+  white-space: nowrap;
+}
+.hero-header-row .button {
+  flex-shrink: 0;
+}
+.auth-card h1 {
+  font-size: clamp(32px, 4vw, 44px);
+}
+.hero > p:last-child,
+.auth-card > p,
+.card > p {
+  color: var(--muted);
+}
+.hero > p:last-child {
+  max-width: 680px;
+  margin: 18px 0 0;
+  font-size: 19px;
+}
+.eyebrow,
+.label {
+  margin: 0 0 10px;
+  color: var(--accent);
+  font-family: "TT Norms Medium", sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 620px) {
+  .hero.compact {
+    margin: 54px 0;
+  }
+  .hero > p:last-child {
+    font-size: 17px;
+  }
+  .hero-header-row {
+    flex-wrap: wrap;
+  }
+  .hero-header-row h1 {
+    white-space: normal;
+  }
+}

@@ -1,0 +1,14 @@
+/* CSP sets style-src 'self' (no 'unsafe-inline'), so inline style="" attributes
+   are silently dropped by the browser - use these utility classes instead. */
+.mt-14 {
+  margin-top: 14px;
+}
+.nowrap {
+  white-space: nowrap;
+}
+.mt-20 {
+  margin-top: 20px;
+}
+.inline-form {
+  display: inline;
+}

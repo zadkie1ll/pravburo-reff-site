@@ -13,6 +13,8 @@ os.environ.setdefault(
     "postgresql+asyncpg://test:test@127.0.0.1:5432/legacy",
 )
 os.environ.setdefault("APP_ENV", "test")
+# Tests run against the API and never depend on whether frontend/dist has been built.
+os.environ.setdefault("FRONTEND_DIST", "/nonexistent-frontend-dist")
 
 from pravburo_ref_common.models import Agent, AgentRole  # noqa: E402
 

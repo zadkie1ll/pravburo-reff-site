@@ -3,7 +3,7 @@ from decimal import Decimal
 from types import SimpleNamespace
 
 from pravburo_ref_common.database import get_session
-from pravburo_ref_common.models import RewardStatus, RewardType
+from pravburo_ref_common.models import Agent, AgentRole, EmploymentFormat, RewardStatus, RewardType
 
 from src.core.payout_pdf import build_payouts_pdf
 from src.main import app
@@ -95,13 +95,6 @@ def test_build_payouts_pdf_handles_empty_rows() -> None:
     assert pdf_bytes.startswith(b"%PDF")
 
 
-def test_payouts_page_requires_login(client) -> None:
-    response = client.get("/payouts", follow_redirects=False)
-
-    assert response.status_code == 303
-    assert response.headers["location"] == "/login"
-
-
 def test_payouts_export_requires_login(client) -> None:
     response = client.get("/payouts/export.pdf", follow_redirects=False)
 
@@ -148,31 +141,6 @@ def _override_agent_and_rewards(agent, rows, applications=()):
     app.dependency_overrides[get_session] = _get_session
 
 
-def test_payouts_page_renders_rows(client) -> None:
-    from src.web.dependencies import require_agent
-
-    agent = SimpleNamespace(id=1)
-    reward = _reward(
-        reward_type=RewardType.ADVANCE,
-        status=RewardStatus.APPROVED,
-        paid_at=None,
-        amount=Decimal("3000"),
-    )
-    _override_agent_and_rewards(agent, [(reward, "Иван Иванов")])
-
-    try:
-        response = client.get("/payouts")
-    finally:
-        app.dependency_overrides.pop(require_agent, None)
-        app.dependency_overrides.pop(get_session, None)
-
-    assert response.status_code == 200
-    assert "Иван Иванов" in response.text
-    assert "Аванс" in response.text
-    assert "Запланировано" in response.text
-    assert "3 000" in response.text
-
-
 def test_payouts_export_pdf_returns_pdf(client) -> None:
     from src.web.dependencies import require_agent
 
@@ -196,36 +164,6 @@ def test_payouts_export_pdf_returns_pdf(client) -> None:
     assert response.content.startswith(b"%PDF")
 
 
-def test_payouts_page_shows_reason_only_for_rejected(client) -> None:
-    from src.web.dependencies import require_agent
-
-    agent = SimpleNamespace(id=1)
-    rejected = _reward(
-        reward_type=RewardType.ADVANCE,
-        status=RewardStatus.REJECTED,
-        amount=Decimal("3000"),
-        rejection_reason="Не удалось связаться с клиентом",
-    )
-    pending = _reward(
-        reward_type=RewardType.MAIN,
-        status=RewardStatus.PENDING,
-        amount=Decimal("10000"),
-        rejection_reason="Причина, которую агенту показывать нельзя",
-    )
-    _override_agent_and_rewards(agent, [(rejected, "Иван Иванов"), (pending, "Пётр Петров")])
-
-    try:
-        response = client.get("/payouts")
-    finally:
-        app.dependency_overrides.pop(require_agent, None)
-        app.dependency_overrides.pop(get_session, None)
-
-    assert response.status_code == 200
-    assert "Отклонено" in response.text
-    assert "Не удалось связаться с клиентом" in response.text
-    assert "Причина, которую агенту показывать нельзя" not in response.text
-
-
 def _get_page(client, agent, rows, applications=(), url="/payouts"):
     from src.web.dependencies import require_agent
 
@@ -241,57 +179,119 @@ def _application(name, stage_code=None) -> SimpleNamespace:
     return SimpleNamespace(full_name=name, deal_stage_code=stage_code)
 
 
-def test_payouts_page_shows_pre_contract_statuses_for_clients_without_reward(client) -> None:
+# --- the payouts list as the React page receives it (JSON) -------------------------------
+
+
+def _partner() -> Agent:
+    return Agent(
+        id=1,
+        email="agent@example.com",
+        role=AgentRole.AGENT,
+        is_active=True,
+        employment_format=EmploymentFormat.SELF_EMPLOYED,
+    )
+
+
+def _get_api(client, rows, applications=(), query=""):
+    """GET the payouts JSON for a partner whose rewards/applications are the given fakes."""
+    from src.web.dependencies import optional_agent
+
+    partner = _partner()
+    app.dependency_overrides[optional_agent] = lambda: partner
+
+    async def _get_session():
+        yield _FakePayoutsSession(rows, applications)
+
+    app.dependency_overrides[get_session] = _get_session
+    try:
+        return client.get(f"/api/v1/site/payouts{query}")
+    finally:
+        app.dependency_overrides.pop(optional_agent, None)
+        app.dependency_overrides.pop(get_session, None)
+
+
+def _rows(response) -> dict[str, dict]:
+    return {row["client_name"]: row for row in response.json()["rows"]}
+
+
+def test_payouts_list_shows_a_reward_with_its_type_status_and_amount(client) -> None:
+    reward = _reward(
+        reward_type=RewardType.ADVANCE,
+        status=RewardStatus.APPROVED,
+        paid_at=None,
+        amount=Decimal("3000"),
+    )
+
+    response = _get_api(client, [(reward, "Иван Иванов")])
+
+    assert response.status_code == 200
+    row = _rows(response)["Иван Иванов"]
+    assert row["type_label"] == "Аванс"
+    assert row["status_label"] == "Запланировано"
+    assert "3" in row["amount_label"] and "000" in row["amount_label"]
+
+
+def test_payouts_list_shows_a_reason_only_for_rejected_rewards(client) -> None:
+    rejected = _reward(
+        reward_type=RewardType.ADVANCE,
+        status=RewardStatus.REJECTED,
+        amount=Decimal("3000"),
+        rejection_reason="Не удалось связаться с клиентом",
+    )
+    pending = _reward(
+        reward_type=RewardType.MAIN,
+        status=RewardStatus.PENDING,
+        amount=Decimal("10000"),
+        rejection_reason="Причина, которую агенту показывать нельзя",
+    )
+
+    response = _get_api(client, [(rejected, "Иван Иванов"), (pending, "Пётр Петров")])
+
+    rows = _rows(response)
+    assert rows["Иван Иванов"]["status_label"] == "Отклонено"
+    assert rows["Иван Иванов"]["rejection_reason"] == "Не удалось связаться с клиентом"
+    assert rows["Пётр Петров"]["rejection_reason"] == ""
+    assert "показывать нельзя" not in response.text
+
+
+def test_payouts_list_shows_pre_contract_statuses_for_clients_without_reward(client) -> None:
     applications = [
         _application("Клиент Анализов"),
         _application("Клиент Депозитов", "UC_4FX5NE"),
         _application("Клиент Игнорин", "UC_1BEALQ"),
     ]
-    response = _get_page(client, SimpleNamespace(id=1), [], applications)
 
-    assert response.status_code == 200
-    for text in ("Клиент Анализов", "Клиент Депозитов", "Клиент Игнорин"):
-        assert text in response.text
-    assert "status-analysis" in response.text
-    assert "status-deposit" in response.text
-    assert "status-ignored" in response.text
+    rows = _rows(_get_api(client, [], applications))
+
+    assert rows["Клиент Анализов"]["status_slug"] == "analysis"
+    assert rows["Клиент Депозитов"]["status_slug"] == "deposit"
+    assert rows["Клиент Игнорин"]["status_slug"] == "ignored"
+    assert all(row["amount_label"] == "—" for row in rows.values())
 
 
-def test_payouts_page_shows_pending_reward_as_scheduled(client) -> None:
+def test_payouts_list_shows_a_pending_reward_as_scheduled_not_as_awaiting_decision(client) -> None:
     reward = _reward(
-        reward_type=RewardType.ADVANCE,
-        status=RewardStatus.PENDING,
-        amount=Decimal("3000"),
+        reward_type=RewardType.ADVANCE, status=RewardStatus.PENDING, amount=Decimal("3000")
     )
-    response = _get_page(client, SimpleNamespace(id=1), [(reward, "Иван Иванов")])
 
-    assert "Запланировано" in response.text
-    assert "Ожидает решения" not in response.text
+    response = _get_api(client, [(reward, "Иван Иванов")])
+
+    assert _rows(response)["Иван Иванов"]["status_label"] == "Запланировано"
+    assert "Ожидает решения" not in [row["status_label"] for row in response.json()["rows"]]
 
 
 def test_payouts_status_filter_applies_to_clients_without_reward(client) -> None:
-    applications = [
-        _application("Клиент Анализов"),
-        _application("Клиент Игнорин", "UC_1BEALQ"),
-    ]
-    response = _get_page(
-        client, SimpleNamespace(id=1), [], applications, url="/payouts?status=ignored"
-    )
+    applications = [_application("Клиент Анализов"), _application("Клиент Игнорин", "UC_1BEALQ")]
 
-    assert "Клиент Игнорин" in response.text
-    assert "Клиент Анализов" not in response.text
+    rows = _rows(_get_api(client, [], applications, "?status=ignored"))
+
+    assert list(rows) == ["Клиент Игнорин"]
 
 
 def test_payouts_month_filter_hides_clients_without_reward(client) -> None:
-    response = _get_page(
-        client,
-        SimpleNamespace(id=1),
-        [],
-        [_application("Клиент Анализов")],
-        url="/payouts?month=2026-02",
-    )
+    rows = _rows(_get_api(client, [], [_application("Клиент Анализов")], "?month=2026-02"))
 
-    assert "Клиент Анализов" not in response.text
+    assert rows == {}
 
 
 def test_payouts_pdf_contains_only_rows_with_reward(client, monkeypatch) -> None:

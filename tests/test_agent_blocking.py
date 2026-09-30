@@ -8,6 +8,7 @@ from sqlalchemy import delete
 
 from src.core.security import hash_password
 from src.main import app
+from src.services.protection import login_rate_limiter
 
 
 @pytest.fixture(autouse=True)
@@ -40,56 +41,51 @@ async def _delete_agent(agent_id: int) -> None:
         await session.commit()
 
 
+async def _api_login(client: AsyncClient, email: str):
+    me = (await client.get("/api/v1/site/me")).json()
+    return await client.post(
+        "/api/v1/site/auth/login",
+        json={"email": email, "password": "demo12345"},
+        headers={"X-CSRF-Token": me["csrf_token"]},
+    )
+
+
 async def test_blocked_agent_cannot_log_in() -> None:
+    login_rate_limiter.reset()
     agent_id, email = await _make_agent(
         is_active=False, blocked_reason="Подозрение на мошенничество"
     )
     try:
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
-            login_page = await client.get("/login")
-            csrf = login_page.text.split('name="csrf" value="')[1].split('"')[0]
-            response = await client.post(
-                "/login",
-                data={"email": email, "password": "demo12345", "csrf": csrf},
-                follow_redirects=False,
-            )
-            assert response.status_code == 403
-            assert "Аккаунт заблокирован" in response.text
-            assert "Подозрение на мошенничество" in response.text
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await _api_login(client, email)
     finally:
         await _delete_agent(agent_id)
 
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "account_blocked"
+    assert "Подозрение на мошенничество" in response.json()["error"]["message"]
+
 
 async def test_active_session_is_kicked_out_once_blocked_mid_session() -> None:
+    login_rate_limiter.reset()
     agent_id, email = await _make_agent(is_active=True)
     try:
-        async with AsyncClient(
-            transport=ASGITransport(app=app), base_url="http://test"
-        ) as client:
-            login_page = await client.get("/login")
-            csrf = login_page.text.split('name="csrf" value="')[1].split('"')[0]
-            login_response = await client.post(
-                "/login",
-                data={"email": email, "password": "demo12345", "csrf": csrf},
-                follow_redirects=False,
-            )
-            assert login_response.status_code == 303
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            assert (await _api_login(client, email)).status_code == 200
 
-            # a page that requires CurrentAgent still works while active
-            still_ok = await client.get("/profile")
-            assert still_ok.status_code == 200
+            # a page that requires an active partner still works while active
+            assert (await client.get("/api/v1/site/profile")).status_code == 200
 
-            # admin blocks the account mid-session
+            # an admin blocks the account mid-session
             async with session_factory() as session:
                 agent = await session.get(Agent, agent_id)
                 agent.is_active = False
                 agent.blocked_reason = "Заблокирован админом"
                 await session.commit()
 
-            kicked_out = await client.get("/profile", follow_redirects=False)
-            assert kicked_out.status_code == 303
-            assert kicked_out.headers["location"] == "/login"
+            kicked_out = await client.get("/api/v1/site/profile")
+            assert kicked_out.status_code == 401
+            # ...and the session itself is ended, not just refused once
+            assert (await client.get("/api/v1/site/me")).json()["authenticated"] is False
     finally:
         await _delete_agent(agent_id)

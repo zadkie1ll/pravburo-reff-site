@@ -1,0 +1,109 @@
+.card,
+.faq-list details {
+  border: 1px solid rgba(54, 92, 128, 0.09);
+  border-radius: 24px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.98), rgba(232, 244, 255, 0.92));
+  box-shadow: var(--shadow);
+}
+.card {
+  padding: 30px;
+}
+.page-shell > .card + .card {
+  margin-top: 24px;
+}
+.card:hover {
+  border-color: rgba(0, 128, 253, 0.16);
+}
+.card h2 {
+  margin: 0 0 16px;
+  color: #344b61;
+  font-size: 25px;
+  font-weight: 600;
+}
+.card-heading {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.avatar,
+.icon-wrap {
+  display: grid;
+  width: 60px;
+  height: 60px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: linear-gradient(140deg, var(--green), #4fa4ee);
+  box-shadow: 0 9px 20px rgba(62, 147, 207, 0.24);
+  font-size: 18px;
+}
+.details {
+  margin: 26px 0 0;
+}
+.details div {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px 0;
+  border-top: 1px solid var(--line);
+}
+.details dt {
+  color: var(--muted);
+}
+.details dd {
+  margin: 0;
+  font-family: "TT Norms Medium", sans-serif;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.referral-card {
+  position: relative;
+  overflow: hidden;
+}
+.referral-card::after {
+  position: absolute;
+  right: -75px;
+  bottom: -100px;
+  width: 230px;
+  height: 230px;
+  border: 2px solid rgba(0, 128, 253, 0.1);
+  border-radius: 50%;
+  content: "";
+}
+.referral-card .icon-wrap {
+  margin-bottom: 38px;
+  font-size: 28px;
+}
+.coming-soon,
+.stage-badge {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  padding: 7px 12px;
+  border-radius: 999px;
+  color: var(--brand);
+  background: var(--accent-soft);
+  font-size: 13px;
+  font-weight: 700;
+}
+.metric {
+  margin: 14px 0 0;
+  color: var(--accent);
+  font-size: 58px;
+  line-height: 1;
+}
+
+@media (max-width: 620px) {
+  .card {
+    padding: 22px 18px;
+    border-radius: 20px;
+  }
+  .details div {
+    display: block;
+  }
+  .details dd {
+    margin-top: 5px;
+    text-align: left;
+  }
+}

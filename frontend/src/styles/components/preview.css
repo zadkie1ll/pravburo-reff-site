@@ -1,0 +1,28 @@
+.preview-link {
+  display: grid;
+  gap: 9px;
+  color: inherit;
+  text-decoration: none;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.preview-link:hover {
+  color: inherit;
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-strong);
+}
+.preview-link span {
+  color: var(--accent);
+  font:
+    600 12px "TT Norms Medium",
+    sans-serif;
+}
+.preview-link strong {
+  color: #344b61;
+  font-size: 20px;
+}
+.preview-link small {
+  color: var(--muted);
+  line-height: 1.45;
+}

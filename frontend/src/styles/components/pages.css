@@ -1,0 +1,28 @@
+.onboarding-notes {
+  display: grid;
+  gap: 10px;
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+.onboarding-notes p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+.not-found {
+  max-width: 640px;
+  margin: clamp(65px, 14vh, 150px) auto;
+  text-align: center;
+}
+.not-found > span {
+  color: var(--accent);
+  font-family: "TT Norms Medium", sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.not-found h1 {
+  margin-top: 12px;
+  font-size: clamp(34px, 5vw, 48px);
+}

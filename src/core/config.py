@@ -26,9 +26,7 @@ class Settings(BaseSettings):
     session_max_age_seconds: int = 30 * 24 * 60 * 60
     legacy_webhook_secret: str = ""
     crm_service_url: str = "http://127.0.0.1:8042"
-    bitrix_lead_url_template: str = (
-        "https://prav-buro.bitrix24.ru/crm/lead/details/{lead_id}/"
-    )
+    bitrix_lead_url_template: str = "https://prav-buro.bitrix24.ru/crm/lead/details/{lead_id}/"
     bounty_admin_url: str = "http://127.0.0.1:8041/admin/rewards"
     internal_service_token: str = "development-internal-token"
     turnstile_site_key: str = ""
@@ -47,8 +45,6 @@ class Settings(BaseSettings):
     smtp_use_tls: bool = True
     registration_code_ttl_seconds: int = 900
     password_reset_code_ttl_seconds: int = 900
-    ui_preview_enabled: bool = False
-    ui_preview_token: str = ""
     admin_emails: str = ""
     telegram_bot_username: str = ""
     telegram_bot_token: str = ""
@@ -67,10 +63,6 @@ class Settings(BaseSettings):
     vapid_contact_email: str = "support@prav-buro.ru"
 
     @property
-    def development_routes_enabled(self) -> bool:
-        return self.app_env != "production"
-
-    @property
     def admin_email_set(self) -> set[str]:
         return {email.strip().lower() for email in self.admin_emails.split(",") if email.strip()}
 
@@ -84,8 +76,6 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_production_secrets(self) -> "Settings":
-        if self.ui_preview_enabled and not self.ui_preview_token:
-            raise ValueError("UI_PREVIEW_TOKEN is required when UI preview is enabled")
         if self.app_env == "production":
             if self.app_debug:
                 raise ValueError("APP_DEBUG must be false in production")

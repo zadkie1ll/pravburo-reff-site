@@ -1,14 +1,11 @@
 import uuid
 
 import pytest
-from httpx import ASGITransport, AsyncClient
 from pravburo_ref_common.database import engine, session_factory
 from pravburo_ref_common.models import Agent, ReferralApplication
 from sqlalchemy import delete
 
-from src.main import app
 from src.services.referrals import get_application_rows
-from src.web.dependencies import require_agent
 
 
 @pytest.fixture(autouse=True)
@@ -69,23 +66,3 @@ async def test_application_rows_show_agent_friendly_statuses_for_own_clients_onl
         "Клиент в суде": "Заявление подано в суд",
     }
     assert all("***" in row.masked_phone for row in rows)
-
-
-async def test_applications_page_and_card_link() -> None:
-    agent_id, extra_ids = await _make_agent_with_applications()
-    try:
-        async with session_factory() as session:
-            real_agent = await session.get(Agent, agent_id)
-        app.dependency_overrides[require_agent] = lambda: real_agent
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-            page = await client.get("/cabinet/applications")
-            cabinet = await client.get("/cabinet")
-    finally:
-        app.dependency_overrides.pop(require_agent, None)
-        await _cleanup(agent_id, extra_ids)
-
-    assert page.status_code == 200
-    assert "Клиент думает" in page.text
-    assert "Не подходит" in page.text
-    assert "Чужой клиент" not in page.text
-    assert 'href="/cabinet/applications"' in cabinet.text

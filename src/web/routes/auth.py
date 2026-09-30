@@ -1,32 +1,23 @@
+"""Server-side legs of social sign-in.
+
+Telegram and Yandex send the browser back to these URLs, so they must stay real backend routes.
+Everything else about authentication (login, registration, password reset) is the JSON API in
+``api_auth.py``. Failures redirect to the React login page, which shows ``?error=``.
+"""
+
 import logging
 import secrets
 from typing import Annotated
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, Depends, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import APIRouter, Depends, Request
+from fastapi.responses import RedirectResponse
 from pravburo_ref_common.database import get_session
 from pravburo_ref_common.models import Agent, AgentRole
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.core.auth import (
-    authenticate,
-    begin_password_reset,
-    begin_registration,
-    confirm_password_reset,
-    confirm_registration,
-)
 from src.core.config import get_settings
-from src.core.email import send_code
-from src.core.security import (
-    csrf_token,
-    normalize_email,
-    valid_csrf,
-    valid_email,
-    verify_telegram_login,
-)
-from src.core.telegram import send_new_partner_notice
-from src.services.protection import login_rate_limiter
+from src.core.security import verify_telegram_login
 from src.services.social_auth import (
     fetch_yandex_profile,
     link_social_identity,
@@ -34,7 +25,6 @@ from src.services.social_auth import (
     yandex_authorize_url,
 )
 from src.web.dependencies import OptionalAgent
-from src.web.routes.pages import templates
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["authentication"])
@@ -48,239 +38,8 @@ def _log_in(request: Request, agent) -> RedirectResponse:
     return RedirectResponse(destination, status_code=303)
 
 
-def context(request: Request, *, error: str = "", info: str = "") -> dict:
-    settings = get_settings()
-    return {
-        "csrf_token": csrf_token(request.session),
-        "error": error,
-        "info": info,
-        "telegram_bot_username": settings.telegram_bot_username,
-        "telegram_auth_url": f"{settings.public_base_url}/auth/telegram/callback",
-        "yandex_enabled": bool(settings.yandex_client_id and settings.yandex_client_secret),
-    }
-
-
-@router.get("/login", response_class=HTMLResponse)
-async def login_page(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse(request=request, name="login.html", context=context(request))
-
-
-@router.post("/login")
-async def login(
-    request: Request,
-    session: Session,
-    email: Annotated[str, Form()],
-    password: Annotated[str, Form()],
-    csrf: Annotated[str, Form()] = "",
-):
-    if not valid_csrf(request.session, csrf):
-        return templates.TemplateResponse(
-            request=request,
-            name="login.html",
-            context=context(request, error="Обновите страницу"),
-            status_code=400,
-        )
-    settings = get_settings()
-    remote_ip = request.client.host if request.client else "unknown"
-    allowed = await login_rate_limiter.allow(
-        remote_ip,
-        limit=settings.login_rate_limit,
-        window_seconds=settings.login_rate_window_seconds,
-    )
-    if not allowed:
-        return templates.TemplateResponse(
-            request=request,
-            name="login.html",
-            context=context(request, error="Слишком много попыток входа. Попробуйте позже."),
-            status_code=429,
-        )
-    agent = await authenticate(session, email, password)
-    if agent is None:
-        return templates.TemplateResponse(
-            request=request,
-            name="login.html",
-            context=context(request, error="Неверная почта или пароль"),
-            status_code=400,
-        )
-    if not agent.is_active:
-        error = "Аккаунт заблокирован."
-        if agent.blocked_reason:
-            error += f" Причина: {agent.blocked_reason}"
-        return templates.TemplateResponse(
-            request=request,
-            name="login.html",
-            context=context(request, error=error),
-            status_code=403,
-        )
-    request.session.clear()
-    if agent.role == AgentRole.ADMIN:
-        request.session["pending_admin_id"] = agent.id
-        destination = "/admin/2fa/verify" if agent.totp_enabled else "/admin/2fa/setup"
-        return RedirectResponse(destination, status_code=303)
-    return _log_in(request, agent)
-
-
-@router.get("/register", response_class=HTMLResponse)
-async def register_page(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse(
-        request=request, name="register.html", context=context(request)
-    )
-
-
-@router.post("/register")
-async def register(
-    request: Request,
-    session: Session,
-    email: Annotated[str, Form()],
-    password: Annotated[str, Form()],
-    password_repeat: Annotated[str, Form()],
-    csrf: Annotated[str, Form()] = "",
-):
-    email = normalize_email(email)
-    error = ""
-    if not valid_csrf(request.session, csrf):
-        error = "Обновите страницу"
-    elif not valid_email(email):
-        error = "Укажите корректную почту"
-    elif len(password) < 6:
-        error = "Пароль должен быть не короче 6 символов"
-    elif password != password_repeat:
-        error = "Пароли не совпадают"
-    if error:
-        return templates.TemplateResponse(
-            request=request,
-            name="register.html",
-            context=context(request, error=error),
-            status_code=400,
-        )
-    try:
-        pending = await begin_registration(session, email, password)
-        if pending is not None:
-            await send_code(email, pending[1], "регистрация")
-    except RuntimeError as exc:
-        return templates.TemplateResponse(
-            request=request,
-            name="register.html",
-            context=context(request, error=str(exc)),
-            status_code=400,
-        )
-    if pending is None:
-        request.session.pop("registration_token", None)
-    else:
-        request.session["registration_token"] = pending[0].token
-    return templates.TemplateResponse(
-        request=request,
-        name="confirm_registration.html",
-        context=context(request, info="Если почта свободна, код отправлен на неё"),
-    )
-
-
-@router.post("/register/confirm")
-async def register_confirm(
-    request: Request,
-    session: Session,
-    code: Annotated[str, Form()],
-    csrf: Annotated[str, Form()] = "",
-):
-    if not valid_csrf(request.session, csrf):
-        error = "Обновите страницу"
-    else:
-        try:
-            agent = await confirm_registration(
-                session, request.session.get("registration_token", ""), code
-            )
-            if agent.role == AgentRole.AGENT:
-                try:
-                    await send_new_partner_notice(agent)
-                except Exception:
-                    logger.warning(
-                        "Failed to notify Telegram chats about new partner: agent_id=%s",
-                        agent.id,
-                    )
-            request.session.clear()
-            return _log_in(request, agent)
-        except ValueError as exc:
-            error = str(exc)
-    return templates.TemplateResponse(
-        request=request,
-        name="confirm_registration.html",
-        context=context(request, error=error),
-        status_code=400,
-    )
-
-
-@router.get("/password/reset", response_class=HTMLResponse)
-async def reset_page(request: Request, agent: OptionalAgent) -> HTMLResponse:
-    ctx = context(request)
-    ctx["is_change"] = agent is not None
-    ctx["agent_email"] = agent.email if agent else ""
-    return templates.TemplateResponse(request=request, name="password_reset.html", context=ctx)
-
-
-@router.post("/password/reset")
-async def reset_begin(
-    request: Request,
-    session: Session,
-    agent: OptionalAgent,
-    email: Annotated[str, Form()],
-    csrf: Annotated[str, Form()] = "",
-):
-    if not valid_csrf(request.session, csrf):
-        ctx = context(request, error="Обновите страницу")
-        ctx["is_change"] = agent is not None
-        ctx["agent_email"] = agent.email if agent else ""
-        return templates.TemplateResponse(
-            request=request,
-            name="password_reset.html",
-            context=ctx,
-            status_code=400,
-        )
-    request.session.pop("reset_token", None)
-    pending = await begin_password_reset(session, email)
-    if pending:
-        request.session["reset_token"] = pending[0].token
-        purpose = "смена пароля" if agent is not None else "восстановление пароля"
-        await send_code(pending[0].email, pending[1], purpose)
-    return templates.TemplateResponse(
-        request=request,
-        name="password_reset_confirm.html",
-        context=context(request, info="Если аккаунт существует, код отправлен на почту"),
-    )
-
-
-@router.post("/password/reset/confirm")
-async def reset_confirm(
-    request: Request,
-    session: Session,
-    code: Annotated[str, Form()],
-    password: Annotated[str, Form()],
-    password_repeat: Annotated[str, Form()],
-    csrf: Annotated[str, Form()] = "",
-):
-    if not valid_csrf(request.session, csrf) or password != password_repeat or len(password) < 6:
-        error = "Проверьте код и пароли"
-    else:
-        try:
-            agent = await confirm_password_reset(
-                session, request.session.get("reset_token", ""), code, password
-            )
-            request.session.clear()
-            return _log_in(request, agent)
-        except ValueError as exc:
-            error = str(exc)
-    return templates.TemplateResponse(
-        request=request,
-        name="password_reset_confirm.html",
-        context=context(request, error=error),
-        status_code=400,
-    )
-
-
-@router.post("/logout")
-async def logout(request: Request, csrf: Annotated[str, Form()] = ""):
-    if valid_csrf(request.session, csrf):
-        request.session.clear()
-    return RedirectResponse("/login", status_code=303)
+def _login_error(message: str) -> RedirectResponse:
+    return RedirectResponse(f"/login?{urlencode({'error': message})}", status_code=303)
 
 
 @router.get("/auth/telegram/callback")
@@ -290,12 +49,7 @@ async def telegram_callback(request: Request, session: Session):
     if not settings.telegram_bot_token or not verify_telegram_login(
         payload, settings.telegram_bot_token, settings.telegram_login_max_age_seconds
     ):
-        return templates.TemplateResponse(
-            request=request,
-            name="login.html",
-            context=context(request, error="Не удалось проверить Telegram"),
-            status_code=400,
-        )
+        return _login_error("Не удалось проверить Telegram")
     agent = await login_social_agent(
         session,
         "telegram",
@@ -326,12 +80,7 @@ async def yandex_callback(request: Request, session: Session, code: str = "", st
     try:
         profile = await fetch_yandex_profile(code)
     except Exception:
-        return templates.TemplateResponse(
-            request=request,
-            name="login.html",
-            context=context(request, error="Не удалось войти через Яндекс"),
-            status_code=400,
-        )
+        return _login_error("Не удалось войти через Яндекс")
     if link_agent_id is not None:
         agent = await session.get(Agent, link_agent_id)
         if agent is None or request.session.get("agent_id") != link_agent_id:
@@ -339,9 +88,7 @@ async def yandex_callback(request: Request, session: Session, code: str = "", st
         try:
             await link_social_identity(session, agent, "yandex", str(profile["id"]))
         except ValueError as exc:
-            return RedirectResponse(
-                f"/profile?{urlencode({'error': str(exc)})}", status_code=303
-            )
+            return RedirectResponse(f"/profile?{urlencode({'error': str(exc)})}", status_code=303)
         return RedirectResponse(
             f"/profile?{urlencode({'info': 'Яндекс привязан'})}", status_code=303
         )
@@ -354,11 +101,6 @@ async def yandex_callback(request: Request, session: Session, code: str = "", st
             profile.get("default_email"),
         )
     except Exception:
-        return templates.TemplateResponse(
-            request=request,
-            name="login.html",
-            context=context(request, error="Не удалось войти через Яндекс"),
-            status_code=400,
-        )
+        return _login_error("Не удалось войти через Яндекс")
     request.session.clear()
     return _log_in(request, agent)

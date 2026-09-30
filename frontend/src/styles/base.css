@@ -1,0 +1,82 @@
+* {
+  box-sizing: border-box;
+}
+html {
+  scroll-behavior: smooth;
+}
+body {
+  position: relative;
+  display: flex;
+  min-height: 100vh;
+  margin: 0;
+  padding-top: 89px;
+  flex-direction: column;
+  overflow-x: hidden;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 7% 18%, rgba(0, 128, 253, 0.1), transparent 21rem),
+    radial-gradient(circle at 96% 46%, rgba(74, 222, 128, 0.08), transparent 24rem),
+    linear-gradient(180deg, #f9fbfc 0%, #f3f6f9 100%);
+  font-family:
+    "SF Pro Display",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+}
+body::before,
+body::after {
+  position: fixed;
+  z-index: -1;
+  width: 320px;
+  height: 320px;
+  border: 2px solid rgba(54, 92, 128, 0.08);
+  border-radius: 50%;
+  content: "";
+  pointer-events: none;
+}
+body::before {
+  top: 170px;
+  left: -235px;
+  box-shadow: 44px 32px 0 rgba(0, 128, 253, 0.025);
+}
+body::after {
+  right: -230px;
+  bottom: 110px;
+  box-shadow: -42px -26px 0 rgba(74, 222, 128, 0.03);
+}
+h1,
+h2,
+h3,
+strong,
+.button,
+.metric,
+.status-pill {
+  font-family: "TT Norms Medium", "SF Pro Display", sans-serif;
+}
+a {
+  color: var(--accent);
+}
+a:hover {
+  color: var(--brand);
+}
+p {
+  line-height: 1.65;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}
+
+@media (max-width: 620px) {
+  body {
+    padding-top: 75px;
+  }
+}

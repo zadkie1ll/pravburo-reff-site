@@ -1,0 +1,114 @@
+.auth-card {
+  max-width: 540px;
+  margin: clamp(38px, 8vh, 90px) auto;
+}
+.auth-card form,
+.lead-form {
+  display: grid;
+  gap: 18px;
+  margin-top: 24px;
+}
+.auth-card > p:last-child {
+  margin-top: 24px;
+  text-align: center;
+}
+.telegram-login {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+}
+label {
+  display: grid;
+  gap: 7px;
+  color: #566779;
+  font-family: "TT Norms Medium", sans-serif;
+  font-size: 14px;
+}
+input,
+textarea,
+select {
+  width: 100%;
+  min-height: 48px;
+  padding: 13px 15px;
+  border: 1px solid #cfdbe5;
+  border-radius: 12px;
+  outline: none;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.94);
+  font:
+    400 16px/1.35 "SF Pro Display",
+    sans-serif;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: #4a9bea;
+  box-shadow: 0 0 0 4px rgba(0, 128, 253, 0.1);
+}
+input[readonly] {
+  color: var(--brand);
+  background: #f5faff;
+}
+.text-button {
+  width: fit-content;
+  padding: 5px 0;
+  border: 0;
+  color: var(--accent);
+  background: none;
+  font:
+    600 15px "TT Norms Medium",
+    sans-serif;
+  cursor: pointer;
+}
+.honeypot {
+  position: absolute;
+  left: -9999px;
+}
+.copy-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+.copy-row input {
+  min-width: 0;
+}
+.qr {
+  display: block;
+  width: 180px;
+  margin: 26px auto 0;
+  padding: 10px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(54, 92, 128, 0.12);
+}
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 15px;
+}
+.filter-row label {
+  min-width: 155px;
+  flex: 1;
+}
+.hint {
+  margin: 4px 0 16px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+@media (max-width: 620px) {
+  .copy-row {
+    display: grid;
+  }
+  .copy-row .button {
+    width: 100%;
+  }
+}

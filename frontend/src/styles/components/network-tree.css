@@ -1,0 +1,14 @@
+.network-tree-chart {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: #fff;
+  cursor: grab;
+}
+.network-tree-chart:active {
+  cursor: grabbing;
+}
+.network-node {
+  cursor: pointer;
+}
