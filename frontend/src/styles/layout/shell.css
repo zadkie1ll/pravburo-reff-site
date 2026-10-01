@@ -1,3 +1,12 @@
+/* React mounts the whole page into #root, one level below <body>. The "footer sticks to the
+   bottom" layout (header, growing .page-shell, footer) needs a flex column at this level. */
+#root {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
 .page-shell {
   width: min(1120px, calc(100% - 40px));
   margin: 54px auto 76px;
