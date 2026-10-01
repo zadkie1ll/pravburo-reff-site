@@ -27,7 +27,10 @@ REWARD_NOTICE_TEXT = {
 }
 
 
-@router.post("/internal/applications/{application_id}/stage", dependencies=[Depends(require_internal_token)])
+@router.post(
+    "/internal/applications/{application_id}/stage",
+    dependencies=[Depends(require_internal_token)],
+)
 async def update_deal_stage(
     application_id: int, payload: DealStageUpdate, session: Session
 ) -> dict[str, str]:

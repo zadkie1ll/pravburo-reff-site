@@ -1,7 +1,7 @@
 /**
- * Routes already served by React. Keep in sync with SPA_PATHS and SPA_PATH_TEMPLATES in
- * src/web/routes/spa.py (a backend test compares them). Links to any other path are full page
- * loads because those pages are still rendered by the backend.
+ * Every page of the site is a React route. Keep in sync with SPA_PATHS and SPA_PATH_TEMPLATES in
+ * src/web/routes/spa.py (a backend test compares them). Links to any other path (the API, the
+ * backend's own endpoints such as the QR code or the PDF export) are full page loads.
  */
 export const SPA_PATHS: readonly string[] = [
   "/",
