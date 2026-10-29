@@ -1,11 +1,13 @@
 import hmac
 import secrets
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from pravburo_ref_common.models import (
     Agent,
     AgentCredential,
     AgentRole,
+    EmploymentFormat,
     PendingPasswordReset,
     PendingRegistration,
 )
@@ -21,6 +23,14 @@ from src.core.security import (
     verify_password,
 )
 from src.core.totp import generate_secret, verify_totp
+
+
+@dataclass(frozen=True, slots=True)
+class RegistrationProfile:
+    display_name: str
+    employment_format: EmploymentFormat
+    payout_details: str
+    inn: str
 
 
 async def authenticate(session: AsyncSession, email: str, password: str) -> Agent | None:
@@ -53,7 +63,7 @@ async def confirm_totp_setup(session: AsyncSession, agent: Agent, code: str) -> 
 
 
 async def begin_registration(
-    session: AsyncSession, email: str, password: str
+    session: AsyncSession, email: str, password: str, profile: RegistrationProfile
 ) -> tuple[PendingRegistration, str] | None:
     settings = get_settings()
     normalized = normalize_email(email)
@@ -70,6 +80,10 @@ async def begin_registration(
         password_hash=hash_password(password),
         code_hash=hash_code(token, code),
         expires_at=datetime.now(UTC) + timedelta(seconds=settings.registration_code_ttl_seconds),
+        display_name=profile.display_name,
+        employment_format=profile.employment_format,
+        payout_details=profile.payout_details,
+        inn=profile.inn or None,
     )
     session.add(pending)
     await session.commit()
@@ -88,6 +102,10 @@ async def confirm_registration(session: AsyncSession, token: str, code: str) -> 
     agent = Agent(
         email=pending.email,
         role=AgentRole.ADMIN if pending.email in settings.admin_email_set else AgentRole.AGENT,
+        display_name=pending.display_name,
+        employment_format=pending.employment_format,
+        payout_details=pending.payout_details,
+        inn=pending.inn,
     )
     session.add(agent)
     await session.flush()

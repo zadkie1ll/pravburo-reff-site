@@ -1,5 +1,5 @@
 import pytest
-from pravburo_ref_common.models import Agent, AgentRole
+from pravburo_ref_common.models import Agent, AgentRole, EmploymentFormat
 
 from src.core.config import get_settings
 from src.services.protection import login_rate_limiter
@@ -147,7 +147,15 @@ def _post(client, path: str, body: dict):
     return client.post(f"/api/v1/site/auth/{path}", json=body, headers=_csrf(client))
 
 
-REGISTER = {"email": "New@Example.com", "password": "secret1", "password_repeat": "secret1"}
+REGISTER = {
+    "email": "New@Example.com",
+    "password": "secret1",
+    "password_repeat": "secret1",
+    "display_name": "Новый Партнёр",
+    "employment_format": EmploymentFormat.SELF_EMPLOYED,
+    "payout_details": "Карта 2200 0000 0000 0000",
+    "inn": "123456789012",
+}
 
 
 @pytest.mark.parametrize(
@@ -169,8 +177,10 @@ def test_register_validates_input(client, side_effects, patch, field) -> None:
 
 
 def test_register_sends_a_code_and_remembers_the_token(client, side_effects, monkeypatch) -> None:
-    async def begin(session, email, password):
+    async def begin(session, email, password, profile):
         assert email == "new@example.com"
+        assert profile.display_name == "Новый Партнёр"
+        assert profile.payout_details == "Карта 2200 0000 0000 0000"
         return FakePending(), "123456"
 
     async def confirm(session, token, code):
@@ -189,10 +199,10 @@ def test_register_sends_a_code_and_remembers_the_token(client, side_effects, mon
 
 
 def test_register_answers_the_same_for_a_taken_address(client, side_effects, monkeypatch) -> None:
-    async def taken(session, email, password):
+    async def taken(session, email, password, profile):
         return None
 
-    async def fresh(session, email, password):
+    async def fresh(session, email, password, profile):
         return FakePending(), "123456"
 
     monkeypatch.setattr(api_auth, "begin_registration", taken)
@@ -206,7 +216,7 @@ def test_register_answers_the_same_for_a_taken_address(client, side_effects, mon
 
 
 def test_register_reports_a_delivery_failure(client, side_effects, monkeypatch) -> None:
-    async def begin(session, email, password):
+    async def begin(session, email, password, profile):
         raise RuntimeError("Почта не настроена")
 
     monkeypatch.setattr(api_auth, "begin_registration", begin)

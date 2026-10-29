@@ -44,15 +44,26 @@ describe("OnboardingPage", () => {
 
     const button = await screen.findByRole("button", { name: "Продолжить" });
     expect(button).toBeDisabled();
+    await user.type(screen.getByLabelText("ФИО"), "Новый Партнёр");
+    await user.type(screen.getByLabelText("Реквизиты для выплат"), "Карта 2200");
+    await user.type(screen.getByLabelText("ИНН"), "123456789012");
     await user.click(screen.getByLabelText(/Самозанятый/));
     await user.click(button);
 
     await waitFor(() => expect(assign).toHaveBeenCalled());
-    expect(sentBody(api, "/site/onboarding")).toEqual({ employment_format: "self_employed" });
+    expect(sentBody(api, "/site/onboarding")).toEqual({
+      employment_format: "self_employed",
+      display_name: "Новый Партнёр",
+      payout_details: "Карта 2200",
+      inn: "123456789012",
+    });
   });
 
   it("links to the manager for people no option fits", async () => {
-    mockApi({ "/me": { body: NEW_PARTNER }, "/site/onboarding": { body: OPTIONS } });
+    mockApi({
+      "/me": { body: NEW_PARTNER },
+      "/site/onboarding": { body: OPTIONS },
+    });
     renderWithProviders(<OnboardingPage />);
 
     expect(await screen.findByRole("link", { name: "Написать менеджеру" })).toHaveAttribute(

@@ -6,6 +6,7 @@ import { errorMessage } from "@/shared/api/errors";
 import { usePageTitle } from "@/shared/hooks/usePageTitle";
 import { AppLink } from "@/shared/ui/AppLink";
 import { Field } from "@/shared/ui/Field";
+import { SelectField } from "@/shared/ui/SelectField";
 
 import { useRegister } from "./api";
 import { AuthCard } from "./AuthCard";
@@ -19,11 +20,25 @@ export function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordRepeat, setPasswordRepeat] = useState("");
+  const [displayName, setDisplayName] = useState("");
+  const [employmentFormat, setEmploymentFormat] = useState<
+    "self_employed" | "individual_entrepreneur" | "individual"
+  >("self_employed");
+  const [payoutDetails, setPayoutDetails] = useState("");
+  const [inn, setInn] = useState("");
 
   function submit(event: FormEvent) {
     event.preventDefault();
     register.mutate(
-      { email, password, password_repeat: passwordRepeat },
+      {
+        email,
+        password,
+        password_repeat: passwordRepeat,
+        display_name: displayName,
+        employment_format: employmentFormat,
+        payout_details: payoutDetails,
+        inn,
+      },
       { onSuccess: ({ info }) => navigate("/register/confirm", { state: { info } }) },
     );
   }
@@ -36,6 +51,15 @@ export function RegisterPage() {
     >
       <SocialLogin yandexLabel="Регистрация через Яндекс" />
       <form onSubmit={submit}>
+        <Field
+          label="ФИО"
+          name="display_name"
+          maxLength={200}
+          required
+          autoComplete="name"
+          value={displayName}
+          onChange={(event) => setDisplayName(event.target.value)}
+        />
         <Field
           label="Почта"
           type="email"
@@ -64,6 +88,39 @@ export function RegisterPage() {
           autoComplete="new-password"
           value={passwordRepeat}
           onChange={(event) => setPasswordRepeat(event.target.value)}
+        />
+        <SelectField
+          label="Формат сотрудничества"
+          name="employment_format"
+          required
+          emptyLabel={null}
+          options={[
+            { value: "self_employed", label: "Самозанятый" },
+            { value: "individual_entrepreneur", label: "ИП" },
+            { value: "individual", label: "Физическое лицо" },
+          ]}
+          value={employmentFormat}
+          onChange={(event) =>
+            setEmploymentFormat(event.target.value as typeof employmentFormat)
+          }
+        />
+        <Field
+          label="Реквизиты для выплат"
+          name="payout_details"
+          maxLength={200}
+          required
+          placeholder="Номер карты или расчётный счёт"
+          value={payoutDetails}
+          onChange={(event) => setPayoutDetails(event.target.value)}
+        />
+        <Field
+          label="ИНН"
+          name="inn"
+          maxLength={12}
+          required={employmentFormat !== "individual"}
+          placeholder="10 или 12 цифр"
+          value={inn}
+          onChange={(event) => setInn(event.target.value)}
         />
         <button className="button" type="submit" disabled={!session || register.isPending}>
           Получить код

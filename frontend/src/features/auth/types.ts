@@ -13,6 +13,10 @@ export interface RegisterRequest {
   email: string;
   password: string;
   password_repeat: string;
+  display_name: string;
+  employment_format: "self_employed" | "individual_entrepreneur" | "individual";
+  payout_details: string;
+  inn: string;
 }
 
 export interface PasswordResetConfirmRequest {

@@ -23,7 +23,13 @@ class FakeDbSession:
 
 
 def _fresh_agent() -> Agent:
-    return Agent(id=5, email="new@example.com", role=AgentRole.AGENT, is_active=True)
+    return Agent(
+        id=5,
+        email="new@example.com",
+        role=AgentRole.AGENT,
+        is_active=True,
+        display_name="Новый Партнёр",
+    )
 
 
 @pytest.fixture
@@ -88,17 +94,26 @@ def test_choosing_a_format_saves_it_and_notifies_admins(client, as_agent, notice
     agent = _fresh_agent()
     db = as_agent(agent)
 
-    response = client.post(URL, json={"employment_format": "self_employed"}, headers=_csrf(client))
+    response = client.post(
+        URL,
+        json={
+            "employment_format": "self_employed",
+            "payout_details": "Карта 2200",
+            "inn": "123456789012",
+        },
+        headers=_csrf(client),
+    )
 
     assert response.json() == {"next": "/cabinet"}
     assert agent.employment_format == EmploymentFormat.SELF_EMPLOYED
     assert db.commits == 1
-    assert notices == [["формат сотрудничества"]]
+    assert notices == [["ФИО", "реквизиты для выплат", "формат сотрудничества", "ИНН"]]
 
 
 def test_choosing_again_does_not_change_the_saved_format(client, as_agent, notices) -> None:
     agent = _fresh_agent()
     agent.employment_format = EmploymentFormat.INDIVIDUAL
+    agent.payout_details = "Карта 2200"
     db = as_agent(agent)
 
     response = client.post(URL, json={"employment_format": "self_employed"}, headers=_csrf(client))

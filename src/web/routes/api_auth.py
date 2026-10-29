@@ -10,11 +10,12 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
 from pravburo_ref_common.database import get_session
-from pravburo_ref_common.models import Agent, AgentRole
+from pravburo_ref_common.models import Agent, AgentRole, EmploymentFormat
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.auth import (
+    RegistrationProfile,
     authenticate,
     begin_password_reset,
     begin_registration,
@@ -25,6 +26,7 @@ from src.core.config import get_settings
 from src.core.email import send_code
 from src.core.security import normalize_email, valid_email
 from src.core.telegram import send_new_partner_notice
+from src.services.profile import validate_inn
 from src.services.protection import login_rate_limiter
 from src.web.api_dependencies import CsrfProtected
 from src.web.api_errors import ApiError
@@ -99,6 +101,10 @@ class RegisterRequest(BaseModel):
     email: str = Field(max_length=254)
     password: str = Field(max_length=256)
     password_repeat: str = Field(max_length=256)
+    display_name: str = Field(min_length=1, max_length=200)
+    employment_format: EmploymentFormat
+    payout_details: str = Field(min_length=1, max_length=200)
+    inn: str = Field(default="", max_length=12)
 
 
 class CodeRequest(BaseModel):
@@ -139,8 +145,31 @@ async def register(request: Request, session: Session, body: RegisterRequest) ->
     if not valid_email(email):
         raise ApiError(400, "validation_error", "Укажите корректную почту", {"email": "invalid"})
     _validate_new_password(body.password, body.password_repeat)
+    display_name = body.display_name.strip()
+    payout_details = body.payout_details.strip()
+    fields: dict[str, str] = {}
+    if not display_name:
+        fields["display_name"] = "required"
+    if not payout_details:
+        fields["payout_details"] = "required"
+    if fields:
+        raise ApiError(400, "validation_error", "Заполните обязательные поля", fields)
     try:
-        pending = await begin_registration(session, email, body.password)
+        inn = validate_inn(body.employment_format, body.inn)
+    except ValueError as exc:
+        raise ApiError(400, "validation_error", str(exc), {"inn": "invalid"}) from exc
+    try:
+        pending = await begin_registration(
+            session,
+            email,
+            body.password,
+            RegistrationProfile(
+                display_name=display_name,
+                employment_format=body.employment_format,
+                payout_details=payout_details,
+                inn=inn or "",
+            ),
+        )
         if pending is not None:
             await send_code(email, pending[1], "регистрация")
     except RuntimeError as exc:

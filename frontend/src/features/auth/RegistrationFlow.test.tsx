@@ -40,9 +40,12 @@ describe("registration", () => {
     renderFlow("/register");
     const user = userEvent.setup();
 
+    await user.type(screen.getByLabelText("ФИО"), "Новый Партнёр");
     await user.type(screen.getByLabelText("Почта"), "new@example.com");
     await user.type(screen.getByLabelText("Пароль"), "secret1");
     await user.type(screen.getByLabelText("Повторите пароль"), "secret1");
+    await user.type(screen.getByLabelText("Реквизиты для выплат"), "Карта 2200");
+    await user.type(screen.getByLabelText("ИНН"), "123456789012");
     await user.click(await enabled("Получить код"));
 
     expect(await screen.findByText("Подтвердите почту")).toBeInTheDocument();
@@ -51,6 +54,10 @@ describe("registration", () => {
       email: "new@example.com",
       password: "secret1",
       password_repeat: "secret1",
+      display_name: "Новый Партнёр",
+      employment_format: "self_employed",
+      payout_details: "Карта 2200",
+      inn: "123456789012",
     });
   });
 
@@ -64,9 +71,12 @@ describe("registration", () => {
     renderFlow("/register");
     const user = userEvent.setup();
 
+    await user.type(screen.getByLabelText("ФИО"), "Новый Партнёр");
     await user.type(screen.getByLabelText("Почта"), "new@example.com");
     await user.type(screen.getByLabelText("Пароль"), "secret1");
     await user.type(screen.getByLabelText("Повторите пароль"), "secret2");
+    await user.type(screen.getByLabelText("Реквизиты для выплат"), "Карта 2200");
+    await user.type(screen.getByLabelText("ИНН"), "123456789012");
     await user.click(await enabled("Получить код"));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Пароли не совпадают");
