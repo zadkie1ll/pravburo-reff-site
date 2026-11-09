@@ -10,7 +10,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Request
 from pravburo_ref_common.database import get_session
-from pravburo_ref_common.models import Agent, AgentRole, EmploymentFormat
+from pravburo_ref_common.models import AgentRole, EmploymentFormat
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,6 +31,7 @@ from src.services.protection import login_rate_limiter
 from src.web.api_dependencies import CsrfProtected
 from src.web.api_errors import ApiError
 from src.web.dependencies import OptionalAgent
+from src.web.login_session import start_login
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/site/auth", tags=["site auth api"])
@@ -52,17 +53,6 @@ class LoginRequest(BaseModel):
 class NextResponse(BaseModel):
     # Where the browser goes next (a page still rendered by the backend or by React).
     next: str
-
-
-def _next_after_login(request: Request, agent: Agent) -> str:
-    """Start the session (or the admin's pending 2FA step) and say where to go."""
-    request.session.clear()
-    if agent.role == AgentRole.ADMIN:
-        request.session["pending_admin_id"] = agent.id
-        return "/admin/2fa/verify" if agent.totp_enabled else "/admin/2fa/setup"
-    request.session["agent_id"] = agent.id
-    request.session["role"] = agent.role.value
-    return "/cabinet"
 
 
 @router.get("/config", response_model=AuthConfig)
@@ -94,7 +84,7 @@ async def login(request: Request, session: Session, body: LoginRequest) -> NextR
         if agent.blocked_reason:
             message += f" Причина: {agent.blocked_reason}"
         raise ApiError(403, "account_blocked", message)
-    return NextResponse(next=_next_after_login(request, agent))
+    return NextResponse(next=start_login(request, agent))
 
 
 class RegisterRequest(BaseModel):
@@ -197,7 +187,7 @@ async def register_confirm(request: Request, session: Session, body: CodeRequest
             logger.warning(
                 "Failed to notify Telegram chats about new partner: agent_id=%s", agent.id
             )
-    return NextResponse(next=_next_after_login(request, agent))
+    return NextResponse(next=start_login(request, agent))
 
 
 @router.post("/password-reset", response_model=InfoResponse, dependencies=[CsrfProtected])
@@ -224,7 +214,7 @@ async def password_reset_confirm(
         )
     except ValueError as exc:
         raise ApiError(400, "invalid_code", str(exc)) from exc
-    return NextResponse(next=_next_after_login(request, agent))
+    return NextResponse(next=start_login(request, agent))
 
 
 @router.post("/logout", response_model=NextResponse, dependencies=[CsrfProtected])

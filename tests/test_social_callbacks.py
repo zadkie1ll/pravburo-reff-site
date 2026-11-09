@@ -3,15 +3,21 @@
 A failure goes back to the React login page, which shows the message from ``?error=``.
 """
 
+import base64
+import json
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from urllib.parse import parse_qs, urlparse
 
+import itsdangerous
 import pytest
 from pravburo_ref_common.database import get_session
-from pravburo_ref_common.models import AgentRole
+from pravburo_ref_common.models import Agent, AgentRole
 
+from src.core.totp import generate_secret, totp_now
 from src.main import app
+from src.services.protection import totp_rate_limiter
+from src.web.api_dependencies import CSRF_HEADER
 from src.web.routes import auth as auth_route
 
 
@@ -71,16 +77,62 @@ def test_a_verified_telegram_login_starts_a_session_and_opens_the_cabinet(
     assert login.await_args.args[1:4] == ("telegram", "777", "Иван Иванов")
 
 
-def test_a_verified_telegram_admin_lands_in_the_admin_panel(client, monkeypatch) -> None:
-    settings = auth_route.get_settings()
-    monkeypatch.setattr(settings, "telegram_bot_token", "bot-token")
-    monkeypatch.setattr(auth_route, "verify_telegram_login", lambda *args: True)
-    admin = SimpleNamespace(id=1, role=AgentRole.ADMIN)
+def _admin_lookup(admin: Agent) -> None:
+    class AdminSession:
+        async def get(self, model, pk):
+            return admin if model is Agent and pk == admin.id else None
+
+        async def commit(self):
+            pass
+
+    app.dependency_overrides[get_session] = AdminSession
+
+
+@pytest.mark.parametrize("provider", ["telegram", "yandex"])
+@pytest.mark.parametrize("step", ["setup", "verify"])
+def test_social_admin_needs_a_valid_second_factor(client, monkeypatch, provider, step) -> None:
+    totp_rate_limiter.reset()
+    admin = Agent(id=1, role=AgentRole.ADMIN, is_active=True, totp_enabled=step == "verify")
+    if admin.totp_enabled:
+        admin.totp_secret = generate_secret()
+    _admin_lookup(admin)
     monkeypatch.setattr(auth_route, "login_social_agent", AsyncMock(return_value=admin))
 
-    response = client.get("/auth/telegram/callback?id=1&hash=ok", follow_redirects=False)
+    if provider == "telegram":
+        monkeypatch.setattr(auth_route.get_settings(), "telegram_bot_token", "bot-token")
+        monkeypatch.setattr(auth_route, "verify_telegram_login", lambda *args: True)
+        callback = "/auth/telegram/callback?id=1&hash=ok"
+    else:
+        state = _yandex_state(client, monkeypatch)
+        monkeypatch.setattr(auth_route, "fetch_yandex_profile", AsyncMock(return_value={"id": 1}))
+        callback = f"/auth/yandex/callback?code=x&state={state}"
 
-    assert response.headers["location"] == "/admin"
+    response = client.get(callback, follow_redirects=False)
+    assert response.headers["location"] == f"/admin/2fa/{step}"
+    assert client.get("/api/v1/site/admin").status_code == 401
+    assert client.get("/api/v1/site/admin/2fa/state").json()["step"] == step
+    me = client.get("/api/v1/site/me").json()
+    assert me["authenticated"] is False
+    headers = {CSRF_HEADER: me["csrf_token"]}
+    url = f"/api/v1/site/admin/2fa/{step}"
+    assert client.post(url, json={"code": "bad"}, headers=headers).status_code == 400
+    assert client.get("/api/v1/site/admin").status_code == 401
+    assert client.post(url, json={"code": totp_now(admin.totp_secret)}, headers=headers).json() == {
+        "next": "/admin"
+    }
+    assert client.get("/api/v1/site/admin").status_code == 200
+
+
+@pytest.mark.parametrize("old_role", ["agent", "admin"])
+def test_old_sessions_without_2fa_cannot_access_admin(client, old_role) -> None:
+    admin = Agent(id=1, role=AgentRole.ADMIN, is_active=True, totp_enabled=True)
+    _admin_lookup(admin)
+    signer = itsdangerous.TimestampSigner(auth_route.get_settings().session_secret)
+    payload = base64.b64encode(json.dumps({"agent_id": admin.id, "role": old_role}).encode())
+    client.cookies.set("session", signer.sign(payload).decode())
+
+    assert client.get("/api/v1/site/admin").status_code == 401
+    assert client.get("/api/v1/site/me").json()["authenticated"] is False
 
 
 def test_yandex_failing_to_answer_goes_back_to_login_with_a_message(client, monkeypatch) -> None:

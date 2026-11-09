@@ -13,7 +13,7 @@ from urllib.parse import urlencode
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import RedirectResponse
 from pravburo_ref_common.database import get_session
-from pravburo_ref_common.models import Agent, AgentRole
+from pravburo_ref_common.models import Agent
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.config import get_settings
@@ -25,17 +25,11 @@ from src.services.social_auth import (
     yandex_authorize_url,
 )
 from src.web.dependencies import OptionalAgent
+from src.web.login_session import start_login
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["authentication"])
 Session = Annotated[AsyncSession, Depends(get_session)]
-
-
-def _log_in(request: Request, agent) -> RedirectResponse:
-    request.session["agent_id"] = agent.id
-    request.session["role"] = agent.role.value
-    destination = "/admin" if agent.role == AgentRole.ADMIN else "/cabinet"
-    return RedirectResponse(destination, status_code=303)
 
 
 def _login_error(message: str) -> RedirectResponse:
@@ -56,8 +50,7 @@ async def telegram_callback(request: Request, session: Session):
         payload["id"],
         " ".join(filter(None, (payload.get("first_name"), payload.get("last_name")))),
     )
-    request.session.clear()
-    return _log_in(request, agent)
+    return RedirectResponse(start_login(request, agent), status_code=303)
 
 
 @router.get("/auth/yandex/start")
@@ -102,5 +95,4 @@ async def yandex_callback(request: Request, session: Session, code: str = "", st
         )
     except Exception:
         return _login_error("Не удалось войти через Яндекс")
-    request.session.clear()
-    return _log_in(request, agent)
+    return RedirectResponse(start_login(request, agent), status_code=303)

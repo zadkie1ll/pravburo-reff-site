@@ -61,7 +61,7 @@ async def api_partner(agent: Annotated[Agent, Depends(api_agent)]) -> Agent:
 async def api_pending_admin(
     request: Request, session: Annotated[AsyncSession, Depends(get_session)]
 ) -> Agent:
-    """An admin who has given the right password but not yet the 2FA code (no full session)."""
+    """An admin who has passed the first sign-in step but not yet 2FA (no full session)."""
     agent_id = request.session.get("pending_admin_id")
     agent = await session.get(Agent, agent_id) if agent_id else None
     if agent is None or agent.role != AgentRole.ADMIN or not agent.is_active:

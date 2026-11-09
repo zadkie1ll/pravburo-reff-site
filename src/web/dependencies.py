@@ -12,7 +12,16 @@ async def optional_agent(
     request: Request, session: Annotated[AsyncSession, Depends(get_session)]
 ) -> Agent | None:
     agent_id = request.session.get("agent_id")
-    return await session.get(Agent, agent_id) if agent_id else None
+    agent = await session.get(Agent, agent_id) if agent_id else None
+    # An old social session or a partner session created before promotion is not admin login.
+    if (
+        agent is not None
+        and agent.role == AgentRole.ADMIN
+        and (request.session.get("admin_2fa_verified") is not True or not agent.totp_enabled)
+    ):
+        request.session.clear()
+        return None
+    return agent
 
 
 async def require_agent(
@@ -43,10 +52,10 @@ async def require_admin(agent: Annotated[Agent, Depends(require_agent)]) -> Agen
 async def require_pending_admin(
     request: Request, session: Annotated[AsyncSession, Depends(get_session)]
 ) -> Agent:
-    """The admin has verified their password but not yet their TOTP code."""
+    """The admin has passed the first sign-in step but not yet their TOTP code."""
     agent_id = request.session.get("pending_admin_id")
     agent = await session.get(Agent, agent_id) if agent_id else None
-    if agent is None or agent.role != AgentRole.ADMIN:
+    if agent is None or agent.role != AgentRole.ADMIN or not agent.is_active:
         raise HTTPException(status_code=303, headers={"Location": "/login"})
     return agent
 

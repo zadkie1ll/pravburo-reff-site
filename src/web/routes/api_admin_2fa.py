@@ -1,6 +1,6 @@
 """Admin two-factor step of the login: set it up (QR + first code) or enter the current code.
 
-After the password an admin only has ``pending_admin_id`` in the session. A full session
+After the first sign-in step an admin only has ``pending_admin_id`` in the session. A full session
 (``agent_id``) exists only once a valid TOTP code has been given here.
 """
 
@@ -51,6 +51,7 @@ def _log_in(request: Request, admin: Agent) -> NextResponse:
     request.session.pop("pending_admin_id", None)
     request.session["agent_id"] = admin.id
     request.session["role"] = admin.role.value
+    request.session["admin_2fa_verified"] = True
     return NextResponse(next="/admin")
 
 
