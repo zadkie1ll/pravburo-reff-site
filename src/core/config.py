@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     crm_service_url: str = "http://127.0.0.1:8042"
     bitrix_lead_url_template: str = "https://prav-buro.bitrix24.ru/crm/lead/details/{lead_id}/"
     bounty_admin_url: str = "http://127.0.0.1:8041/admin/rewards"
+    dev_bounty_port: int | None = Field(default=None, ge=1, le=65535)
     internal_service_token: str = "development-internal-token"
     turnstile_site_key: str = ""
     turnstile_secret_key: str = ""

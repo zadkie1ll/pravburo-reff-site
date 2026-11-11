@@ -100,6 +100,10 @@ app.include_router(api_cabinet_router)
 app.include_router(api_payouts_router)
 app.include_router(api_profile_router)
 app.include_router(api_referral_router)
+if settings.app_env == "development" and settings.dev_bounty_port is not None:
+    from src.web.routes.dev_bounty import router as dev_bounty_router
+
+    app.include_router(dev_bounty_router)
 # The site's pages: the React app (index.html) for every page route listed in spa.py.
 spa_router = build_spa_router()
 if spa_router is not None:

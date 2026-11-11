@@ -32,10 +32,18 @@ echo "→ Заглушка CRM (порт 8042)"
 nohup python3 "$SITE/scripts/react_demo/fake_crm.py" >"$DEMO/crm.log" 2>&1 &
 echo $! >"$DEMO/crm.pid"
 
+echo "→ Начисления (порт 8051)"
+cd "$DEMO"
+APP_ENV=development SITE_SERVICE_URL="http://127.0.0.1:8050" \
+PYTHONPATH="$SITE/../pravburo-reff-bounty:$SITE/common" \
+nohup "$SITE/../pravburo-reff-bounty/.venv/bin/python" -m uvicorn src.main:app \
+  --host 127.0.0.1 --port 8051 >"$DEMO/bounty.log" 2>&1 &
+echo $! >"$DEMO/bounty.pid"
+
 echo "→ Сайт (порт 8050)"
 # Запуск из папки без .env: настоящие ключи Telegram/SMTP не подхватываются.
 cd "$DEMO"
-APP_ENV=development PUBLIC_BASE_URL="http://127.0.0.1:8050" \
+APP_ENV=development DEV_BOUNTY_PORT=8051 PUBLIC_BASE_URL="http://127.0.0.1:8050" \
 TURNSTILE_SITE_KEY=1x00000000000000000000AA TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA \
 PYTHONPATH="$SITE" nohup "$SITE/.venv/bin/python" -m uvicorn src.site.main:app --port 8050 \
   >"$DEMO/server.log" 2>&1 &
