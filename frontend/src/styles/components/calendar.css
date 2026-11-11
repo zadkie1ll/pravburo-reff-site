@@ -1,54 +1,195 @@
+.payout-calendar-heading,
+.payout-day-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.payout-calendar-heading h2 {
+  margin-bottom: 6px;
+}
+.payout-calendar-heading p {
+  margin: 0 0 20px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.payout-legend,
+.payout-legend span,
+.calendar-day-dots {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.payout-legend {
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.payout-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
 }
 .calendar-weekday {
-  padding: 4px 6px;
+  padding: 6px;
   color: var(--muted);
   font-size: 12px;
   font-weight: 700;
-  text-transform: uppercase;
+  text-align: center;
 }
 .calendar-day {
-  min-height: 90px;
-  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  height: 104px;
+  min-width: 0;
+  padding: 10px;
   border: 1px solid var(--line);
   border-radius: 12px;
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+}
+.calendar-day:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: #f1f7ff;
+}
+.calendar-day:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
 }
 .calendar-day-outside {
-  opacity: 0.4;
+  opacity: 0.35;
+  cursor: default;
 }
-.calendar-day-today {
+.calendar-day-today .calendar-day-number {
+  color: var(--accent);
+}
+.calendar-day-selected {
   border-color: var(--accent);
+  background: #e8f3ff;
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
 .calendar-day-number {
-  display: block;
-  margin-bottom: 6px;
-  color: var(--muted);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
 }
-.calendar-entry {
-  margin-top: 6px;
-  padding: 6px 8px;
-  border-radius: 8px;
-  font-size: 12px;
-  line-height: 1.35;
+.calendar-day-count {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 11px;
 }
-.calendar-entry.status-paid {
-  color: var(--success);
-  background: #e4f7eb;
-}
-.calendar-entry.status-scheduled {
-  color: var(--brand);
-  background: var(--accent-soft);
-}
-.calendar-entry.status-overdue {
-  color: #8c2831;
-  background: #feecef;
-}
-.calendar-entry .text-button {
+.calendar-day-total {
   margin-top: 2px;
-  font-size: 12px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.calendar-day-dots {
+  margin-top: auto;
+}
+.payout-day-details {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+.payout-day-heading h3 {
+  margin: 0;
+  color: var(--brand);
+  font-size: 20px;
+}
+.payout-day-heading > span {
+  color: var(--muted);
+  font-size: 14px;
+}
+.payout-day-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+.payout-detail-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px 210px;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+}
+.payout-detail-person,
+.payout-detail-amount {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 5px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.payout-detail-person > span,
+.payout-detail-person small {
+  color: var(--muted);
+  font-size: 13px;
+}
+.payout-detail-amount > strong {
+  font-size: 18px;
+}
+.payout-detail-action .button {
+  width: 100%;
+  font-size: 13px;
+}
+.payout-empty {
+  color: var(--muted);
+}
+.payout-show-more {
+  margin-top: 16px;
+}
+@media (max-width: 800px) {
+  .payout-detail-row {
+    grid-template-columns: minmax(0, 1fr) 130px;
+  }
+  .payout-detail-action {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 620px) {
+  .calendar-grid {
+    gap: 3px;
+  }
+  .calendar-day {
+    height: 78px;
+    border-radius: 8px;
+    padding: 5px 3px;
+  }
+  .calendar-day-count {
+    font-size: 9px;
+  }
+  .calendar-day-count > span {
+    display: none;
+  }
+  .calendar-day-total {
+    font-size: 9px;
+    letter-spacing: -0.3px;
+  }
+  .payout-day-heading h3 {
+    font-size: 18px;
+  }
+  .payout-detail-row {
+    padding: 12px;
+    gap: 10px;
+    grid-template-columns: minmax(0, 1fr) 105px;
+  }
 }

@@ -44,6 +44,9 @@ class MonthRef(BaseModel):
 class CalendarEntry(BaseModel):
     reward_id: int
     client_name: str
+    agent_name: str
+    type_label: str
+    status_label: str
     amount_label: str
     status_slug: str
     can_mark_paid: bool
@@ -54,6 +57,7 @@ class CalendarDayOut(BaseModel):
     in_month: bool
     is_today: bool
     entries: list[CalendarEntry]
+    total_amount_label: str
 
 
 class OverdueRow(BaseModel):
@@ -86,6 +90,9 @@ def _entry(row: PayoutRow) -> CalendarEntry:
     return CalendarEntry(
         reward_id=row.reward.id,
         client_name=row.client_name,
+        agent_name=row.agent_name,
+        type_label=row.type_label,
+        status_label=row.status_label,
         amount_label=row.amount_label,
         status_slug=row.status_slug,
         can_mark_paid=row.status_slug in ("scheduled", "overdue"),
@@ -141,6 +148,9 @@ async def calendar_page(
                     in_month=day.in_month,
                     is_today=day.is_today,
                     entries=[_entry(row) for row in day.rows],
+                    total_amount_label=format_amount(
+                        sum((row.reward.amount or 0) for row in day.rows)
+                    ),
                 )
                 for day in week
             ]

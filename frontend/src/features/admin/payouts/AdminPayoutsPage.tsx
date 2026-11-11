@@ -78,7 +78,14 @@ export function AdminPayoutsPage() {
         statuses={data.statuses}
         onStatus={(status) => setParams(new URLSearchParams(querySearch({ ...query, status })))}
       />
-      <PayoutCalendar weeks={data.weeks} disabled={busy} onMarkPaid={pay} />
+      <PayoutCalendar
+        key={`${data.year}-${data.month}-${data.status}`}
+        year={data.year}
+        month={data.month}
+        weeks={data.weeks}
+        disabled={busy}
+        onMarkPaid={pay}
+      />
 
       <p className="mt-20">
         <AppLink to="/admin">← Админ-панель</AppLink>

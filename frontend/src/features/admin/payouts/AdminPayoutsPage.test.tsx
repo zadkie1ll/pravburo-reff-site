@@ -13,6 +13,7 @@ const day = (n: number, extra: Partial<CalendarDay> = {}): CalendarDay => ({
   in_month: true,
   is_today: false,
   entries: [],
+  total_amount_label: "0 ₽",
   ...extra,
 });
 
@@ -35,10 +36,14 @@ const CALENDAR: PayoutsCalendar = {
       day(1),
       day(2, {
         is_today: true,
+        total_amount_label: "3 000 ₽",
         entries: [
           {
             reward_id: 11,
             client_name: "Иван Клиентов",
+            agent_name: "Ольга Партнёрова",
+            type_label: "Аванс",
+            status_label: "Запланировано",
             amount_label: "3 000 ₽",
             status_slug: "scheduled",
             can_mark_paid: true,
@@ -46,10 +51,14 @@ const CALENDAR: PayoutsCalendar = {
         ],
       }),
       day(3, {
+        total_amount_label: "10 000 ₽",
         entries: [
           {
             reward_id: 12,
             client_name: "Пётр Оплатов",
+            agent_name: "Ольга Партнёрова",
+            type_label: "Основная выплата",
+            status_label: "Выплачено",
             amount_label: "10 000 ₽",
             status_slug: "paid",
             can_mark_paid: false,
@@ -80,6 +89,42 @@ const calendar = (extra: Partial<PayoutsCalendar> = {}) => ({ body: { ...CALENDA
 afterEach(() => vi.unstubAllGlobals());
 
 describe("AdminPayoutsPage", () => {
+  it("keeps a busy day compact and reveals the rest of its list on demand", async () => {
+    const entries = Array.from({ length: 15 }, (_, index) => ({
+      agent_name: "Ольга Партнёрова",
+      type_label: "Основная выплата",
+      status_label: "Выплачено",
+      amount_label: "10 000 ₽",
+      status_slug: "paid",
+      can_mark_paid: false,
+      reward_id: 100 + index,
+      client_name: `Клиент ${index + 1}`,
+    }));
+    mockApi({
+      [PATH]: calendar({
+        weeks: [[day(2, { is_today: true, entries, total_amount_label: "150 000 ₽" })]],
+      }),
+    });
+    renderWithProviders(<AdminPayoutsPage />, PATH);
+    const user = userEvent.setup();
+
+    expect(
+      await screen.findByRole("button", { name: "2 сентября: начислений 15" }),
+    ).not.toHaveTextContent("Клиент");
+    expect(document.querySelectorAll(".payout-detail-row")).toHaveLength(6);
+    await user.click(screen.getByRole("button", { name: "Показать ещё (9)" }));
+    expect(document.querySelectorAll(".payout-detail-row")).toHaveLength(12);
+  });
+
+  it("shows an empty state when an empty date is chosen", async () => {
+    mockApi({ [PATH]: calendar() });
+    renderWithProviders(<AdminPayoutsPage />, PATH);
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "1 сентября: начислений 0" }));
+    expect(screen.getByText("На этот день начислений нет.")).toBeInTheDocument();
+    expect(screen.queryByText("Иван Клиентов")).not.toBeInTheDocument();
+  });
+
   it("shows the month with each payout on its day", async () => {
     mockApi({ [PATH]: calendar() });
     renderWithProviders(<AdminPayoutsPage />, PATH);
@@ -88,9 +133,11 @@ describe("AdminPayoutsPage", () => {
     for (const weekday of ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"]) {
       expect(screen.getByText(weekday)).toBeInTheDocument();
     }
-    const scheduled = screen.getByText("Иван Клиентов · 3 000 ₽").closest(".calendar-entry")!;
-    expect(scheduled).toHaveClass("status-scheduled");
-    expect(scheduled.closest(".calendar-day")).toHaveClass("calendar-day-today");
+    const selected = screen.getByRole("button", { name: "2 сентября: начислений 1" });
+    expect(selected).toHaveClass("calendar-day-today");
+    expect(selected).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("Иван Клиентов")).toBeInTheDocument();
+    expect(screen.queryByText("Пётр Оплатов")).not.toBeInTheDocument();
     expect(screen.getByText("31").closest(".calendar-day")).toHaveClass("calendar-day-outside");
   });
 
@@ -99,10 +146,13 @@ describe("AdminPayoutsPage", () => {
     renderWithProviders(<AdminPayoutsPage />, PATH);
     await screen.findByText("Сентябрь 2026");
 
-    const paid = screen.getByText("Пётр Оплатов · 10 000 ₽").closest(".calendar-entry")!;
-    const scheduled = screen.getByText("Иван Клиентов · 3 000 ₽").closest(".calendar-entry")!;
-    expect(within(paid as HTMLElement).queryByRole("button")).not.toBeInTheDocument();
-    expect(within(scheduled as HTMLElement).getByRole("button")).toBeInTheDocument();
+    const user = userEvent.setup();
+    const scheduled = screen.getByText("Иван Клиентов").closest("article")!;
+    expect(within(scheduled).getByRole("button")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "3 сентября: начислений 1" }));
+    const paid = screen.getByText("Пётр Оплатов").closest("article")!;
+    expect(within(paid).queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.queryByText("Иван Клиентов")).not.toBeInTheDocument();
   });
 
   it("explains the planned date with the current overdue period", async () => {

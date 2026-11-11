@@ -11,6 +11,9 @@ export interface MonthRef {
 export interface CalendarEntry {
   reward_id: number;
   client_name: string;
+  agent_name: string;
+  type_label: string;
+  status_label: string;
   amount_label: string;
   status_slug: string;
   can_mark_paid: boolean;
@@ -21,6 +24,7 @@ export interface CalendarDay {
   in_month: boolean;
   is_today: boolean;
   entries: CalendarEntry[];
+  total_amount_label: string;
 }
 
 export interface OverdueRow {
