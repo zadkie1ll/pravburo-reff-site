@@ -17,19 +17,25 @@ export function LinkStatsCard({ stats }: { stats: LinkStats }) {
           <tbody>
             <tr className="row-link">
               <td>
-                <AppLink to="/cabinet/visits">Переходов по ссылке →</AppLink>
+                <AppLink className="nav-link" to="/cabinet/visits">
+                  Переходов по ссылке →
+                </AppLink>
               </td>
               <td>{stats.visits}</td>
             </tr>
             <tr className="row-link">
               <td>
-                <AppLink to="/cabinet/applications">Оставлено заявок →</AppLink>
+                <AppLink className="nav-link" to="/cabinet/applications">
+                  Оставлено заявок →
+                </AppLink>
               </td>
               <td>{stats.applications}</td>
             </tr>
             <tr className="row-link">
               <td>
-                <AppLink to="/payouts">Заключено договоров →</AppLink>
+                <AppLink className="nav-link" to="/payouts">
+                  Заключено договоров →
+                </AppLink>
               </td>
               <td>{stats.contracts}</td>
             </tr>

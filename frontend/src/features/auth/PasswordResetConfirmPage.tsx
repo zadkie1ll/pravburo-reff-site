@@ -25,6 +25,7 @@ export function PasswordResetConfirmPage() {
 
   return (
     <AuthCard
+      backTo="/password/reset"
       title="Новый пароль"
       info={info}
       error={confirm.isError ? errorMessage(confirm.error) : ""}

@@ -29,6 +29,7 @@ export function PayoutsPage() {
 
   return (
     <>
+      <BackToCabinet />
       <section className="hero">
         <p className="eyebrow">Кабинет агента</p>
         <h1>Выплаты</h1>
@@ -42,7 +43,6 @@ export function PayoutsPage() {
         onApply={apply}
       />
       <PayoutsTable rows={data.rows} />
-      <BackToCabinet />
     </>
   );
 }

@@ -199,3 +199,37 @@ async def test_only_an_admin_can_be_a_manager(setup: Setup) -> None:
     assert response.status_code == 400
     assert response.json()["error"]["code"] == "invalid_manager"
     assert (await setup.db_application()).assigned_manager_id is None
+
+
+async def test_pagination_keeps_rows_with_the_same_timestamp_in_stable_order(setup: Setup) -> None:
+    extra_ids = []
+    try:
+        async with session_factory() as session:
+            original = await session.get(ReferralApplication, setup.application_id)
+            extra = [
+                ReferralApplication(
+                    agent_id=setup.partner_id,
+                    full_name=f"Клиент{setup.marker}-{index}",
+                    phone_normalized=f"+7999{uuid.uuid4().int % 10**7:07d}",
+                    created_at=original.created_at,
+                )
+                for index in range(26)
+            ]
+            session.add_all(extra)
+            await session.commit()
+            extra_ids = [row.id for row in extra]
+        first = (await setup.client.get(URL, params={"q": setup.marker})).json()
+        second = (await setup.client.get(URL, params={"q": setup.marker, "page": 2})).json()
+        first_ids = [row["id"] for row in first["rows"]]
+        second_ids = [row["id"] for row in second["rows"]]
+        assert first["total_pages"] == 2
+        assert len(first_ids) == 25
+        assert len(second_ids) == 2
+        assert first_ids + second_ids == sorted([setup.application_id, *extra_ids], reverse=True)
+    finally:
+        if extra_ids:
+            async with session_factory() as session:
+                await session.execute(
+                    delete(ReferralApplication).where(ReferralApplication.id.in_(extra_ids))
+                )
+                await session.commit()

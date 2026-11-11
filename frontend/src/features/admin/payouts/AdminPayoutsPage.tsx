@@ -2,7 +2,7 @@ import { useSearchParams } from "react-router-dom";
 
 import { errorMessage } from "@/shared/api/errors";
 import { usePageTitle } from "@/shared/hooks/usePageTitle";
-import { AppLink } from "@/shared/ui/AppLink";
+import { PageBack } from "@/shared/ui/PageBack";
 import { PageError, PageLoader } from "@/shared/ui/PageState";
 
 import { querySearch, useCalendar, useMarkPaid, useSaveOverdueDays } from "./api";
@@ -46,6 +46,7 @@ export function AdminPayoutsPage() {
 
   return (
     <>
+      <PageBack to="/admin">← Админ-панель</PageBack>
       <section className="card">
         <p className="eyebrow">Администратор</p>
         <h1>Выплаты</h1>
@@ -86,10 +87,6 @@ export function AdminPayoutsPage() {
         disabled={busy}
         onMarkPaid={pay}
       />
-
-      <p className="mt-20">
-        <AppLink to="/admin">← Админ-панель</AppLink>
-      </p>
     </>
   );
 }

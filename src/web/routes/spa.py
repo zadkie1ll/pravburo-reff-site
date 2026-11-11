@@ -33,6 +33,7 @@ SPA_PATHS = (
     "/admin",
     "/admin/applications",
     "/admin/partners",
+    "/admin/partners/new",
     "/admin/network/rates",
     "/admin/network/tree",
     "/admin/faq",
@@ -46,6 +47,7 @@ SPA_PATHS = (
 SPA_PATH_TEMPLATES = (
     "/r/{referral_code:uuid}",
     "/r/{referral_code:uuid}/success",
+    "/admin/partners/{agent_id:int}/edit",
 )
 
 

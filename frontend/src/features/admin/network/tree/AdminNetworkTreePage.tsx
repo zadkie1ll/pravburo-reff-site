@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { usePageTitle } from "@/shared/hooks/usePageTitle";
-import { AppLink } from "@/shared/ui/AppLink";
+import { PageBack } from "@/shared/ui/PageBack";
 import { Field } from "@/shared/ui/Field";
 import { PageError, PageLoader } from "@/shared/ui/PageState";
 
@@ -47,37 +47,40 @@ export function AdminNetworkTreePage() {
   const backSearch = q ? `?q=${encodeURIComponent(q)}` : "";
 
   return (
-    <section className="card">
-      <p className="eyebrow">Администратор</p>
-      <h1>Сеть партнёров</h1>
-      <SearchForm key={q} initial={q} onSearch={(text) => setParams(text ? { q: text } : {})} />
-      {q && data.matches.length === 0 && <p>Ничего не найдено</p>}
-      {data.matches.length > 0 && (
-        <ul className="network-matches">
-          {data.matches.map((agent) => (
-            <li key={agent.id}>
-              <Link to={{ search: `?root=${agent.id}` }}>{agent.label}</Link> —{" "}
-              {agent.email || "без почты"}
-            </li>
-          ))}
-        </ul>
+    <>
+      {data.root ? (
+        <PageBack to={`/admin/network/tree${backSearch}`}>← Назад к поиску</PageBack>
+      ) : (
+        <PageBack to="/admin">← Админ-панель</PageBack>
       )}
-      {data.root && (
-        <>
-          <p className="mt-20">
-            <Link to={{ search: backSearch }}>← Назад к поиску</Link>
-          </p>
-          <h2>Дерево: {data.root.label}</h2>
-          <p className="hint">
-            Клик по узлу сворачивает/разворачивает его ветку. Колесо мыши — масштаб, перетаскивание
-            — панорама.
-          </p>
-          {data.tree && <NetworkTreeChart key={data.root.id} root={data.tree} />}
-        </>
-      )}
-      <p className="mt-20">
-        <AppLink to="/admin">← Админ-панель</AppLink>
-      </p>
-    </section>
+      <section className="card">
+        <p className="eyebrow">Администратор</p>
+        <h1>Сеть партнёров</h1>
+        <SearchForm key={q} initial={q} onSearch={(text) => setParams(text ? { q: text } : {})} />
+        {q && data.matches.length === 0 && <p>Ничего не найдено</p>}
+        {data.matches.length > 0 && (
+          <ul className="network-matches">
+            {data.matches.map((agent) => (
+              <li key={agent.id}>
+                <Link className="nav-link" to={{ search: `?root=${agent.id}` }}>
+                  {agent.label}
+                </Link>{" "}
+                — {agent.email || "без почты"}
+              </li>
+            ))}
+          </ul>
+        )}
+        {data.root && (
+          <>
+            <h2>Дерево: {data.root.label}</h2>
+            <p className="hint">
+              Клик по узлу сворачивает/разворачивает его ветку. Колесо мыши — масштаб,
+              перетаскивание — панорама.
+            </p>
+            {data.tree && <NetworkTreeChart key={data.root.id} root={data.tree} />}
+          </>
+        )}
+      </section>
+    </>
   );
 }

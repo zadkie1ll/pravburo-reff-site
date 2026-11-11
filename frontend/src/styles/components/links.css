@@ -1,28 +1,109 @@
-.footer-actions {
+.footer-actions,
+.navigation-links,
+.back-link {
   display: flex;
-  margin-top: 26px;
   align-items: center;
-  justify-content: space-between;
-  gap: 18px;
+  flex-wrap: wrap;
+  gap: 12px;
 }
-.footer-actions a,
-.back-link a {
-  color: var(--brand);
-  font-family: "Gilroy Light", sans-serif;
-  font-weight: 500;
+.footer-actions {
+  margin-top: 26px;
+  justify-content: space-between;
+}
+.nav-link,
+.back-link a,
+.navigation-links a,
+.pagination a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 10px 16px;
+  border: 1px solid #dce5ee;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #365c80;
+  font-family: "TT Norms Medium", "SF Pro Display", sans-serif;
+  font-size: 14px;
+  line-height: 1.4;
+  text-align: center;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+}
+.nav-link:hover,
+.back-link a:hover,
+.navigation-links a:hover,
+.pagination a:hover {
+  border-color: #b6d4f7;
+  background: #edf5ff;
+  color: #1674d3;
   text-decoration: none;
 }
-.footer-actions a:hover,
-.back-link a:hover {
-  color: var(--accent);
-  text-decoration: underline;
+.nav-link:focus-visible,
+.back-link a:focus-visible,
+.navigation-links a:focus-visible,
+.pagination a:focus-visible {
+  outline: 3px solid #80baff;
+  outline-offset: 3px;
 }
 .back-link {
   margin-top: 25px;
 }
-
+.page-back {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0 0 28px;
+}
+.page-back + .hero,
+.page-back + .card {
+  margin-top: 0;
+}
+.page-back + .eyebrow {
+  margin-top: 0;
+}
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid #e0e8f0;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.75);
+}
+.pagination-status {
+  padding: 8px 12px;
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+}
+.network-matches {
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  list-style: none;
+}
+.network-matches li {
+  overflow-wrap: anywhere;
+}
 @media (max-width: 620px) {
-  .footer-actions {
-    display: grid;
+  .pagination {
+    gap: 8px;
+    padding: 12px;
+  }
+  .pagination-status {
+    order: -1;
+    flex-basis: 100%;
+  }
+  .pagination a {
+    flex: 1;
   }
 }

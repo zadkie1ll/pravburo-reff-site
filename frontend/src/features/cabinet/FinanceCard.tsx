@@ -24,7 +24,9 @@ export function FinanceCard({ finance }: { finance: Finance }) {
           </div>
         ))}
       </dl>
-      <AppLink to="/payouts">Подробнее о выплатах →</AppLink>
+      <AppLink className="nav-link" to="/payouts">
+        Подробнее о выплатах →
+      </AppLink>
     </section>
   );
 }

@@ -48,10 +48,15 @@ describe("AdminPartnersPage", () => {
     expect(await screen.findByText("Ольга Партнёрова")).toBeInTheDocument();
     expect(screen.getByText("olga@example.com", { exact: false })).toBeInTheDocument();
     expect(screen.getByText("Активен")).toBeInTheDocument();
-    expect(screen.getByText("9000.00")).toBeInTheDocument();
+    expect(screen.getByText(/9\s*000\s*₽/)).toBeInTheDocument();
     expect(screen.getByText("Карта 1234")).toBeInTheDocument();
     expect(screen.getByText("Всего: 1")).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Заметка:/)).toHaveValue("звонить после 18");
+    expect(screen.getByText("звонить после 18")).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Заметка:/)).not.toBeVisible();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Редактировать партнёра: Ольга Партнёрова" }),
+    ).toHaveAttribute("href", "/admin/partners/7/edit");
   });
 
   it("falls back to placeholders for missing data", async () => {
@@ -86,7 +91,8 @@ describe("AdminPartnersPage", () => {
     renderWithProviders(<AdminPartnersPage />, PATH);
     const user = userEvent.setup();
 
-    const note = await screen.findByLabelText(/^Заметка:/);
+    await user.click(await screen.findByText("Заметка", { exact: true }));
+    const note = screen.getByLabelText(/^Заметка:/);
     await user.clear(note);
     await user.type(note, "VIP");
     await user.click(screen.getByRole("button", { name: "Сохранить" }));
@@ -109,7 +115,8 @@ describe("AdminPartnersPage", () => {
     renderWithProviders(<AdminPartnersPage />, PATH);
     const user = userEvent.setup();
 
-    const reason = await screen.findByLabelText(/^Причина блокировки:/);
+    await user.click(await screen.findByText("Управление доступом", { exact: true }));
+    const reason = screen.getByLabelText(/^Причина блокировки:/);
     expect(reason).toBeRequired();
     await user.type(reason, "Мошенничество");
     await user.click(screen.getByRole("button", { name: "Заблокировать" }));
@@ -133,7 +140,8 @@ describe("AdminPartnersPage", () => {
     renderWithProviders(<AdminPartnersPage />, PATH);
     const user = userEvent.setup();
 
-    await user.click(await screen.findByRole("button", { name: "Разблокировать" }));
+    await user.click(await screen.findByText("Управление доступом", { exact: true }));
+    await user.click(screen.getByRole("button", { name: "Разблокировать" }));
 
     expect(await screen.findByText("Активен")).toBeInTheDocument();
     expect(api.mock.calls.some(([u]) => u.endsWith("/7/unblock"))).toBe(true);
@@ -144,6 +152,7 @@ describe("AdminPartnersPage", () => {
     renderWithProviders(<AdminPartnersPage />, PATH);
 
     await screen.findByText("Ольга Партнёрова");
+    expect(screen.queryByText("Управление доступом", { exact: true })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Заблокировать" })).not.toBeInTheDocument();
   });
 
@@ -160,7 +169,8 @@ describe("AdminPartnersPage", () => {
     renderWithProviders(<AdminPartnersPage />, PATH);
     const user = userEvent.setup();
 
-    await user.type(await screen.findByLabelText(/^Причина блокировки:/), "x");
+    await user.click(await screen.findByText("Управление доступом", { exact: true }));
+    await user.type(screen.getByLabelText(/^Причина блокировки:/), "x");
     await user.click(screen.getByRole("button", { name: "Заблокировать" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(

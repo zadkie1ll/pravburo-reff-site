@@ -15,7 +15,9 @@ export function AccountCard({ profile, onNotice }: AccountCardProps) {
       <h2>Аккаунт</h2>
       <EmailChange profile={profile} onNotice={onNotice} />
       <p className="back-link">
-        <AppLink to="/password/reset">Изменить пароль →</AppLink>
+        <AppLink className="nav-link" to="/password/reset">
+          Изменить пароль →
+        </AppLink>
       </p>
       {profile.yandex_enabled && (
         <p className="back-link">

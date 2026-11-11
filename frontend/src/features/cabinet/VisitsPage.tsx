@@ -13,6 +13,7 @@ export function VisitsPage() {
 
   return (
     <>
+      <BackToCabinet />
       <section className="hero">
         <p className="eyebrow">Кабинет агента</p>
         <h1>Переходы по ссылке</h1>
@@ -50,7 +51,6 @@ export function VisitsPage() {
           </table>
         </div>
       </section>
-      <BackToCabinet />
     </>
   );
 }

@@ -4,10 +4,11 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query
 from pravburo_ref_common.database import get_session
-from pravburo_ref_common.models import Agent, AgentRole
-from pydantic import BaseModel, Field
+from pravburo_ref_common.models import Agent, AgentRole, EmploymentFormat
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.services.admin_partners import PartnerInput, create_partner, edit_partner
 from src.services.partners import STATUS_LABELS, PartnerRow, list_partners
 from src.web.api_dependencies import ApiAdmin, CsrfProtected
 from src.web.api_errors import ApiError
@@ -46,6 +47,46 @@ class NoteRequest(BaseModel):
 
 class BlockRequest(BaseModel):
     reason: str = Field(max_length=1000)
+
+
+class PartnerProfileRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    display_name: str = Field(min_length=1, max_length=200)
+    phone: str = Field(default="", max_length=20)
+    employment_format: EmploymentFormat
+    payout_details: str = Field(min_length=1, max_length=200)
+    inn: str = Field(default="", max_length=12)
+    admin_note: str = Field(default="", max_length=2000)
+
+
+class PartnerCreateRequest(PartnerProfileRequest):
+    email: str = Field(min_length=1, max_length=254)
+
+
+class PartnerDetails(BaseModel):
+    id: int
+    display_name: str
+    email: str | None
+    phone: str | None
+    employment_format: EmploymentFormat | None
+    payout_details: str | None
+    inn: str | None
+    admin_note: str | None
+    is_admin: bool
+
+
+def _details(agent: Agent) -> PartnerDetails:
+    return PartnerDetails(
+        id=agent.id,
+        display_name=agent.display_name,
+        email=agent.email,
+        phone=agent.phone_normalized,
+        employment_format=agent.employment_format,
+        payout_details=agent.payout_details,
+        inn=agent.inn,
+        admin_note=agent.admin_note,
+        is_admin=agent.role == AgentRole.ADMIN,
+    )
 
 
 def _row(row: PartnerRow) -> PartnerOut:
@@ -96,6 +137,33 @@ async def save_note(_: ApiAdmin, session: Session, agent_id: int, body: NoteRequ
     agent.admin_note = body.note.strip() or None
     await session.commit()
     return OkResponse()
+
+
+@router.post("", response_model=PartnerDetails, status_code=201, dependencies=[CsrfProtected])
+async def create(admin: ApiAdmin, session: Session, body: PartnerCreateRequest) -> PartnerDetails:
+    try:
+        data = PartnerInput(**body.model_dump(exclude={"email"}))
+        agent = await create_partner(session, admin.id, body.email, data)
+    except ValueError as exc:
+        raise ApiError(400, "partner_invalid", str(exc)) from exc
+    return _details(agent)
+
+
+@router.get("/{agent_id}", response_model=PartnerDetails)
+async def details(_: ApiAdmin, session: Session, agent_id: int) -> PartnerDetails:
+    return _details(await _agent(session, agent_id))
+
+
+@router.post("/{agent_id}", response_model=PartnerDetails, dependencies=[CsrfProtected])
+async def edit(
+    admin: ApiAdmin, session: Session, agent_id: int, body: PartnerProfileRequest
+) -> PartnerDetails:
+    agent = await _agent(session, agent_id)
+    try:
+        agent = await edit_partner(session, admin.id, agent, PartnerInput(**body.model_dump()))
+    except ValueError as exc:
+        raise ApiError(400, "partner_invalid", str(exc)) from exc
+    return _details(agent)
 
 
 @router.post("/{agent_id}/block", response_model=OkResponse, dependencies=[CsrfProtected])

@@ -1,4 +1,6 @@
 import { useSearchParams } from "react-router-dom";
+import { useInfoFromNavigation } from "@/features/auth/useInfoFromNavigation";
+import { AdminIcon } from "../AdminIcon";
 
 import { errorMessage } from "@/shared/api/errors";
 import { usePageTitle } from "@/shared/hooks/usePageTitle";
@@ -9,10 +11,11 @@ import { PageError, PageLoader } from "@/shared/ui/PageState";
 import { filtersToSearch, readListFilters, type ListFilters } from "../list/listFilters";
 import { SearchFilterForm } from "../list/SearchFilterForm";
 import { useBlockPartner, usePartners, useSaveNote, useUnblockPartner } from "./api";
-import { PartnersTable } from "./PartnersTable";
+import { PartnerCards } from "./PartnerCards";
 
 export function AdminPartnersPage() {
   usePageTitle("Партнёры");
+  const info = useInfoFromNavigation();
   const [params, setParams] = useSearchParams();
   const applied = readListFilters(params);
   const { data, isPending, isError } = usePartners(applied);
@@ -32,22 +35,37 @@ export function AdminPartnersPage() {
 
   return (
     <>
-      <SearchFilterForm
-        key={`${applied.q}|${applied.status}`}
-        title="Партнёры"
-        searchLabel="Найти по имени, почте или телефону"
-        statusLabel="Статус"
-        statusOptions={data.statuses}
-        applied={applied}
-        totalCount={data.total_count}
-        onApply={apply}
-      />
+      <div className="admin-partner-toolbar">
+        <AppLink className="admin-back" to="/admin?section=partners">
+          <AdminIcon name="back" /> Партнёры
+        </AppLink>
+        <AppLink className="button" to="/admin/partners/new">
+          <AdminIcon name="add" /> Создать партнёра
+        </AppLink>
+      </div>
+      {info && (
+        <p className="notice-success" role="status">
+          {info}
+        </p>
+      )}
+      <div className="admin-partners-filters">
+        <SearchFilterForm
+          key={`${applied.q}|${applied.status}`}
+          title="Партнёры"
+          searchLabel="Найти по имени, почте или телефону"
+          statusLabel="Статус"
+          statusOptions={data.statuses}
+          applied={applied}
+          totalCount={data.total_count}
+          onApply={apply}
+        />
+      </div>
       {failure && (
         <p className="alert" role="alert">
           {errorMessage(failure, "Не удалось сохранить изменение.")}
         </p>
       )}
-      <PartnersTable
+      <PartnerCards
         rows={data.rows}
         disabled={saving}
         onNote={(id, note) => saveNote.mutate({ id, note })}
@@ -59,9 +77,6 @@ export function AdminPartnersPage() {
         totalPages={data.total_pages}
         searchFor={(page) => filtersToSearch({ ...applied, page })}
       />
-      <p className="mt-20">
-        <AppLink to="/admin">← Админ-панель</AppLink>
-      </p>
     </>
   );
 }

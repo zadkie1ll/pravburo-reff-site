@@ -100,9 +100,7 @@ export function RegisterPage() {
             { value: "individual", label: "Физическое лицо" },
           ]}
           value={employmentFormat}
-          onChange={(event) =>
-            setEmploymentFormat(event.target.value as typeof employmentFormat)
-          }
+          onChange={(event) => setEmploymentFormat(event.target.value as typeof employmentFormat)}
         />
         <Field
           label="Реквизиты для выплат"
@@ -127,7 +125,9 @@ export function RegisterPage() {
         </button>
       </form>
       <p>
-        <AppLink to="/login">Уже есть аккаунт</AppLink>
+        <AppLink className="nav-link" to="/login">
+          Уже есть аккаунт
+        </AppLink>
       </p>
     </AuthCard>
   );

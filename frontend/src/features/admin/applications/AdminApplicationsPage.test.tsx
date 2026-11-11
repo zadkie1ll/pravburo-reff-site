@@ -52,6 +52,8 @@ describe("AdminApplicationsPage", () => {
     expect(await screen.findByText("Иван Клиентов")).toBeInTheDocument();
     expect(screen.getByText("Ольга Партнёрова", { exact: false })).toBeInTheDocument();
     expect(screen.getByText("ConnectionError")).toBeInTheDocument();
+    expect(screen.getByRole("article", { name: "Заявка: Иван Клиентов" })).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
     expect(screen.getByText("Всего: 1")).toBeInTheDocument();
     expect(screen.getByLabelText("Обработка: Иван Клиентов")).toHaveValue("new");
     expect(screen.getByLabelText("Менеджер: Иван Клиентов")).toHaveValue("");
@@ -91,12 +93,12 @@ describe("AdminApplicationsPage", () => {
     mockApi({ [LIST_PATH]: { body: { ...LIST, page: 2, total_pages: 3 } } });
     renderWithProviders(<AdminApplicationsPage />, "/admin/applications?q=Иван&page=2");
 
-    expect(await screen.findByText("Страница 2 из 3")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "← Назад" })).toHaveAttribute(
+    expect(await screen.findAllByText("Страница 2 из 3")).toHaveLength(2);
+    expect(screen.getAllByRole("link", { name: "← Назад" })[0]).toHaveAttribute(
       "href",
       expect.stringContaining("q="),
     );
-    expect(screen.getByRole("link", { name: "Вперёд →" })).toHaveAttribute(
+    expect(screen.getAllByRole("link", { name: "Вперёд →" })[0]).toHaveAttribute(
       "href",
       expect.stringContaining("page=3"),
     );

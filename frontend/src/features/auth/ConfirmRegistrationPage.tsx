@@ -23,6 +23,7 @@ export function ConfirmRegistrationPage() {
 
   return (
     <AuthCard
+      backTo="/register"
       title="Подтвердите почту"
       info={info}
       error={confirm.isError ? errorMessage(confirm.error) : ""}

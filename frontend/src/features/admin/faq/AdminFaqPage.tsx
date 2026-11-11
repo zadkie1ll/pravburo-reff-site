@@ -1,6 +1,6 @@
 import { errorMessage } from "@/shared/api/errors";
 import { usePageTitle } from "@/shared/hooks/usePageTitle";
-import { AppLink } from "@/shared/ui/AppLink";
+import { PageBack } from "@/shared/ui/PageBack";
 import { PageError, PageLoader } from "@/shared/ui/PageState";
 
 import { useAdminFaq, useCreateFaq, useDeleteFaq, useMoveFaq, useUpdateFaq } from "./api";
@@ -23,12 +23,13 @@ export function AdminFaqPage() {
 
   return (
     <>
+      <PageBack to="/admin">← Админ-панель</PageBack>
       <section className="card">
         <p className="eyebrow">Администратор</p>
         <h1>Материалы</h1>
         <p>
           Вопросы и ответы, которые видны партнёрам на странице{" "}
-          <a href="/faq" target="_blank" rel="noopener">
+          <a className="nav-link" href="/faq" target="_blank" rel="noopener">
             «Как это работает»
           </a>
           .
@@ -64,10 +65,6 @@ export function AdminFaqPage() {
           <p>Вопросов пока нет.</p>
         </section>
       )}
-
-      <p className="mt-20">
-        <AppLink to="/admin">← Админ-панель</AppLink>
-      </p>
     </>
   );
 }

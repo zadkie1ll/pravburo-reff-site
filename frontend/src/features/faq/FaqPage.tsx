@@ -1,5 +1,6 @@
 import { useSession } from "@/features/session/useSession";
 import { usePageTitle } from "@/shared/hooks/usePageTitle";
+import { BackToCabinet } from "@/features/cabinet/BackToCabinet";
 import { ExternalLink } from "@/shared/ui/ExternalLink";
 
 import { useFaq } from "./api";
@@ -11,6 +12,7 @@ export function FaqPage() {
 
   return (
     <>
+      {session?.authenticated && <BackToCabinet />}
       <section className="hero">
         <p className="eyebrow">Как это работает</p>
         <h1>Частые вопросы</h1>
@@ -48,12 +50,6 @@ export function FaqPage() {
             </ExternalLink>
           </section>
         </div>
-      )}
-
-      {session?.authenticated && (
-        <p className="back-link">
-          <a href="/cabinet">← Вернуться в кабинет</a>
-        </p>
       )}
     </>
   );

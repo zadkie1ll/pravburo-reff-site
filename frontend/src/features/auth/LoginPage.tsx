@@ -29,7 +29,7 @@ export function LoginPage() {
   }
 
   return (
-    <AuthCard eyebrow="Личный кабинет" title="Войти" error={error}>
+    <AuthCard backTo="/" eyebrow="Личный кабинет" title="Войти" error={error}>
       <form onSubmit={submit}>
         <Field
           label="Почта"
@@ -55,8 +55,9 @@ export function LoginPage() {
         </button>
       </form>
       <SocialLogin yandexLabel="Войти через Яндекс" />
-      <p>
-        <a href="/register">Создать аккаунт</a> · <a href="/password/reset">Забыли пароль?</a>
+      <p className="navigation-links">
+        <a href="/register">Создать аккаунт</a>
+        <a href="/password/reset">Забыли пароль?</a>
       </p>
     </AuthCard>
   );

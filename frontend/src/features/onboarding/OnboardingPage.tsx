@@ -1,3 +1,4 @@
+import { PageBack } from "@/shared/ui/PageBack";
 import { useState, type FormEvent } from "react";
 
 import { homeHref } from "@/app/layout/navigation";
@@ -43,6 +44,7 @@ export function OnboardingPage() {
 
   return (
     <>
+      <PageBack to="/">← На главную</PageBack>
       <section className="hero">
         <p className="eyebrow">Первый вход</p>
         <h1>Данные для выплат</h1>

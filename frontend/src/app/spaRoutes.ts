@@ -20,6 +20,7 @@ export const SPA_PATHS: readonly string[] = [
   "/admin",
   "/admin/applications",
   "/admin/partners",
+  "/admin/partners/new",
   "/admin/network/rates",
   "/admin/network/tree",
   "/admin/faq",
@@ -28,12 +29,14 @@ export const SPA_PATHS: readonly string[] = [
   "/admin/2fa/verify",
 ];
 
-/** Routes with parameters (React Router syntax). Nothing inside the app links to them. */
+/** Routes with parameters (React Router syntax). */
 export const SPA_PATH_PATTERNS: readonly string[] = [
   "/r/:referralCode",
   "/r/:referralCode/success",
+  "/admin/partners/:agentId/edit",
 ];
 
 export function isSpaPath(path: string): boolean {
-  return SPA_PATHS.includes(path);
+  const pathname = path.split(/[?#]/, 1)[0] ?? "";
+  return SPA_PATHS.includes(pathname) || /^\/admin\/partners\/\d+\/edit$/.test(pathname);
 }

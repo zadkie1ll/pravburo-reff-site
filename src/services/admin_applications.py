@@ -74,7 +74,7 @@ async def list_applications(
     stmt = (
         select(ReferralApplication)
         .join(Agent, Agent.id == ReferralApplication.agent_id)
-        .order_by(ReferralApplication.created_at.desc())
+        .order_by(ReferralApplication.created_at.desc(), ReferralApplication.id.desc())
         .add_columns(Agent.display_name, Agent.email)
     )
     if query:

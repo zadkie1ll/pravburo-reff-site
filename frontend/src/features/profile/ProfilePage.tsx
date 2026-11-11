@@ -30,6 +30,18 @@ export function ProfilePage() {
 
   return (
     <>
+      <p className="page-back">
+        {profile.is_admin && (
+          <>
+            <a className="nav-link" href="/admin">
+              Админ-панель
+            </a>
+          </>
+        )}
+        <AppLink className="nav-link" to="/cabinet">
+          ← Вернуться в кабинет
+        </AppLink>
+      </p>
       <section className="hero">
         <p className="eyebrow">Профиль</p>
         <h1>Личные данные</h1>
@@ -39,14 +51,6 @@ export function ProfilePage() {
         <ProfileForm profile={profile} onNotice={setNotice} />
         <AccountCard profile={profile} onNotice={setNotice} />
       </div>
-      <p className="back-link">
-        {profile.is_admin && (
-          <>
-            <a href="/admin">Админ-панель</a> ·{" "}
-          </>
-        )}
-        <AppLink to="/cabinet">← Вернуться в кабинет</AppLink>
-      </p>
     </>
   );
 }

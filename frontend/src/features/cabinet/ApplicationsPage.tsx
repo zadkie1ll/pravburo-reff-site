@@ -14,6 +14,7 @@ export function ApplicationsPage() {
 
   return (
     <>
+      <BackToCabinet />
       <section className="hero">
         <p className="eyebrow">Кабинет агента</p>
         <h1>Оставлено заявок</h1>
@@ -45,7 +46,6 @@ export function ApplicationsPage() {
           </table>
         </div>
       </section>
-      <BackToCabinet />
     </>
   );
 }

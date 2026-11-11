@@ -12,7 +12,7 @@ export function Pagination({ page, totalPages, searchFor }: PaginationProps) {
   return (
     <nav className="pagination mt-20" aria-label="Страницы">
       {page > 1 && <Link to={{ search: searchFor(page - 1) }}>← Назад</Link>}
-      <span>
+      <span className="pagination-status" aria-live="polite">
         Страница {page} из {totalPages}
       </span>
       {page < totalPages && <Link to={{ search: searchFor(page + 1) }}>Вперёд →</Link>}

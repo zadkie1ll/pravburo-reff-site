@@ -39,10 +39,16 @@ export function CabinetPage() {
       <ClientsTable clients={cabinet.clients} />
 
       <div className="footer-actions">
-        <span>
-          <AppLink to="/payouts">Подробнее о выплатах</AppLink> ·{" "}
-          <AppLink to="/profile">Профиль</AppLink> ·{" "}
-          <AppLink to="/faq">Как это работает / FAQ</AppLink>
+        <span className="navigation-links">
+          <AppLink className="nav-link" to="/payouts">
+            Подробнее о выплатах
+          </AppLink>
+          <AppLink className="nav-link" to="/profile">
+            Профиль
+          </AppLink>
+          <AppLink className="nav-link" to="/faq">
+            Как это работает / FAQ
+          </AppLink>
         </span>
         <LogoutButton />
       </div>

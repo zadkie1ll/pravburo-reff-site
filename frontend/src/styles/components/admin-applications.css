@@ -1,0 +1,77 @@
+.application-card {
+  overflow-wrap: anywhere;
+}
+.application-phone {
+  margin: 18px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+.application-status {
+  padding: 5px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  background: #edf5ff;
+  color: #3173bd;
+}
+.application-status.is-in_progress {
+  background: #fff5df;
+  color: #806100;
+}
+.application-status.is-closed {
+  background: #eaf6ee;
+  color: #227443;
+}
+.application-card .partner-card-metrics dd {
+  font-size: 17px;
+}
+.application-partner {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 18px;
+}
+.application-partner > span,
+.application-delivery > span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.application-partner small {
+  color: var(--muted);
+  font-size: 13px;
+}
+.application-delivery {
+  padding: 14px;
+  background: #f8fafc;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+.application-delivery p {
+  margin: 5px 0 0;
+  font-size: 14px;
+}
+.application-delivery-error {
+  color: var(--danger);
+}
+.application-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.application-controls label,
+.application-controls select {
+  min-width: 0;
+  max-width: 100%;
+}
+.application-controls label {
+  font-size: 13px;
+}
+.application-controls select {
+  font-size: 14px;
+  margin-bottom: 0;
+}
+@media (max-width: 480px) {
+  .application-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

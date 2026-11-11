@@ -17,6 +17,7 @@ import { AdminPayoutsPage } from "@/features/admin/payouts/AdminPayoutsPage";
 import { AdminNetworkRatesPage } from "@/features/admin/network/AdminNetworkRatesPage";
 import { AdminNetworkTreePage } from "@/features/admin/network/tree/AdminNetworkTreePage";
 import { AdminPartnersPage } from "@/features/admin/partners/AdminPartnersPage";
+import { PartnerEditorPage } from "@/features/admin/partners/PartnerEditorPage";
 import { ApplicationsPage } from "@/features/cabinet/ApplicationsPage";
 import { CabinetPage } from "@/features/cabinet/CabinetPage";
 import { VisitsPage } from "@/features/cabinet/VisitsPage";
@@ -60,6 +61,8 @@ export function App() {
               <Route path="/admin" element={<AdminPanelPage />} />
               <Route path="/admin/applications" element={<AdminApplicationsPage />} />
               <Route path="/admin/partners" element={<AdminPartnersPage />} />
+              <Route path="/admin/partners/new" element={<PartnerEditorPage />} />
+              <Route path="/admin/partners/:agentId/edit" element={<PartnerEditorPage />} />
               <Route path="/admin/network/rates" element={<AdminNetworkRatesPage />} />
               <Route path="/admin/network/tree" element={<AdminNetworkTreePage />} />
               <Route path="/admin/faq" element={<AdminFaqPage />} />

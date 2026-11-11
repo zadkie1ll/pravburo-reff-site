@@ -2,14 +2,14 @@ import { useSearchParams } from "react-router-dom";
 
 import { errorMessage } from "@/shared/api/errors";
 import { usePageTitle } from "@/shared/hooks/usePageTitle";
-import { AppLink } from "@/shared/ui/AppLink";
+import { PageBack } from "@/shared/ui/PageBack";
 import { Pagination } from "@/shared/ui/Pagination";
 import { PageError, PageLoader } from "@/shared/ui/PageState";
 
 import { filtersToSearch, readListFilters, type ListFilters } from "../list/listFilters";
 import { SearchFilterForm } from "../list/SearchFilterForm";
 import { useApplications, useSetManager, useSetProcessingStatus } from "./api";
-import { ApplicationsTable } from "./ApplicationsTable";
+import { ApplicationCards } from "./ApplicationCards";
 
 export function AdminApplicationsPage() {
   usePageTitle("Заявки");
@@ -32,23 +32,31 @@ export function AdminApplicationsPage() {
 
   return (
     <>
+      <PageBack to="/admin">← Админ-панель</PageBack>
       {/* key: remount with the applied values when the URL changes (e.g. browser back). */}
-      <SearchFilterForm
-        key={`${applied.q}|${applied.status}`}
-        title="Заявки"
-        searchLabel="Найти по имени или телефону"
-        statusLabel="Статус доставки в Битрикс"
-        statusOptions={data.delivery_statuses}
-        applied={applied}
-        totalCount={data.total_count}
-        onApply={apply}
-      />
+      <div className="admin-partners-filters">
+        <SearchFilterForm
+          key={`${applied.q}|${applied.status}`}
+          title="Заявки"
+          searchLabel="Найти по имени или телефону"
+          statusLabel="Статус доставки в Битрикс"
+          statusOptions={data.delivery_statuses}
+          applied={applied}
+          totalCount={data.total_count}
+          onApply={apply}
+        />
+      </div>
       {failure && (
         <p className="alert" role="alert">
           {errorMessage(failure, "Не удалось сохранить изменение.")}
         </p>
       )}
-      <ApplicationsTable
+      <Pagination
+        page={data.page}
+        totalPages={data.total_pages}
+        searchFor={(page) => filtersToSearch({ ...applied, page })}
+      />
+      <ApplicationCards
         rows={data.rows}
         processingStatuses={data.processing_statuses}
         managers={data.managers}
@@ -61,9 +69,6 @@ export function AdminApplicationsPage() {
         totalPages={data.total_pages}
         searchFor={(page) => filtersToSearch({ ...applied, page })}
       />
-      <p className="mt-20">
-        <AppLink to="/admin">← Админ-панель</AppLink>
-      </p>
     </>
   );
 }

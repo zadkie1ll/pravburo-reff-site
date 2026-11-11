@@ -1,9 +1,5 @@
-import { AppLink } from "@/shared/ui/AppLink";
+import { PageBack } from "@/shared/ui/PageBack";
 
 export function BackToCabinet() {
-  return (
-    <p className="back-link">
-      <AppLink to="/cabinet">← Вернуться в кабинет</AppLink>
-    </p>
-  );
+  return <PageBack to="/cabinet">← Вернуться в кабинет</PageBack>;
 }
