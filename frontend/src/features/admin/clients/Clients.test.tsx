@@ -82,7 +82,7 @@ describe("existing client import", () => {
     );
     expect(screen.getByLabelText("ФИО клиента")).toHaveValue(CLIENT.full_name);
     expect(screen.getByLabelText("Телефон клиента")).toHaveValue(CLIENT.phone);
-    expect(screen.getByLabelText(/^Осталось выплатить/)).toHaveValue(null);
+    expect(screen.getByLabelText(/^К выплате партнёру/)).toHaveValue(null);
     await user.clear(screen.getByLabelText("ФИО клиента"));
     await user.type(screen.getByLabelText("ФИО клиента"), "Иван Исправленный");
     await user.type(screen.getByLabelText("Заметка"), "Проверено");
@@ -124,10 +124,10 @@ describe("existing client import", () => {
     await user.click(
       await screen.findByRole("button", { name: "Выбрать партнёра: Анна Партнёрова" }),
     );
-    await user.type(screen.getByLabelText(/^Осталось выплатить/), "12500.50");
+    await user.type(screen.getByLabelText(/^К выплате партнёру/), "12500.50");
     await user.click(screen.getByRole("button", { name: "Найти сделку" }));
     await screen.findByLabelText("Данные сделки из Битрикс24");
-    expect(screen.getByLabelText(/^Осталось выплатить/)).toHaveValue(12500.5);
+    expect(screen.getByLabelText(/^К выплате партнёру/)).toHaveValue(12500.5);
     await user.click(screen.getByRole("button", { name: "Добавить клиента" }));
     await screen.findByText(/Список клиентов/);
     expect(sentBody(api, BASE)).toMatchObject({ agent_id: 7, current_amount: "12500.5" });
@@ -169,10 +169,10 @@ describe("existing client import", () => {
     await user.type(screen.getByLabelText("ID сделки в Битрикс24 или ссылка"), "432");
     await user.click(screen.getByRole("button", { name: "Найти сделку" }));
     await screen.findByLabelText("Данные сделки из Битрикс24");
-    await user.type(screen.getByLabelText(/^Осталось выплатить/), "0");
+    await user.type(screen.getByLabelText(/^К выплате партнёру/), "0");
     await user.click(screen.getByRole("button", { name: "Добавить клиента" }));
     expect(sentBody(api, BASE)).toBeUndefined();
-    expect(screen.getByLabelText(/^Осталось выплатить/)).toBeInvalid();
+    expect(screen.getByLabelText(/^К выплате партнёру/)).toBeInvalid();
     await user.type(screen.getByLabelText("ID сделки в Битрикс24 или ссылка"), "9");
     expect(screen.queryByLabelText("Данные сделки из Битрикс24")).not.toBeInTheDocument();
   });
@@ -384,7 +384,7 @@ describe("Bitrix search and preview", () => {
     expect(api.mock.calls.every(([url]) => url.startsWith("/api/v1/"))).toBe(true);
     await user.clear(screen.getByLabelText("Телефон клиента"));
     await user.type(screen.getByLabelText("Телефон клиента"), "+79998887766");
-    await user.type(screen.getByLabelText(/^Осталось выплатить/), "100");
+    await user.type(screen.getByLabelText(/^К выплате партнёру/), "100");
     await user.click(screen.getByRole("button", { name: "Добавить клиента" }));
     await screen.findByText(/Список клиентов/);
     expect(sentBody(api, BASE)).toMatchObject({

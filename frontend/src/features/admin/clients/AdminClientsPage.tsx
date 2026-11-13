@@ -114,7 +114,7 @@ export function AdminClientsPage() {
                       <dd>{row.stage_label || "Не указан"}</dd>
                     </div>
                     <div>
-                      <dt>Осталось выплатить сейчас</dt>
+                      <dt>К выплате партнёру</dt>
                       <dd>{money(row.current_amount)}</dd>
                     </div>
                     <div>

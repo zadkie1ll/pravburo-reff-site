@@ -307,7 +307,7 @@ function ClientForm({ initialAgent }: { initialAgent: number | null }) {
                 onChange={(event) => setPhone(event.target.value)}
               />
               <Field
-                label="Осталось выплатить"
+                label="К выплате партнёру"
                 name="current_amount"
                 type="number"
                 min="0.01"
