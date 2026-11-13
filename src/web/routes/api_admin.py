@@ -11,6 +11,11 @@ router = APIRouter(prefix="/api/v1/site/admin", tags=["site admin api"])
 # separate bounty service; nginx routes those paths there.
 ADMIN_SECTIONS = [
     {
+        "title": "Действующие клиенты",
+        "description": "Перенос и привязка существующих клиентов Битрикса к партнёрам.",
+        "url": "/admin/clients",
+    },
+    {
         "title": "Партнёры",
         "description": "Список, поиск, блокировка, заметки.",
         "url": "/admin/partners",

@@ -11,6 +11,8 @@ import { RegisterPage } from "@/features/auth/RegisterPage";
 import { AdminApplicationsPage } from "@/features/admin/applications/AdminApplicationsPage";
 import { TwoFactorSetupPage } from "@/features/admin/twofactor/TwoFactorSetupPage";
 import { TwoFactorVerifyPage } from "@/features/admin/twofactor/TwoFactorVerifyPage";
+import { AdminClientsPage } from "@/features/admin/clients/AdminClientsPage";
+import { ClientEditorPage } from "@/features/admin/clients/ClientEditorPage";
 import { AdminPanelPage } from "@/features/admin/AdminPanelPage";
 import { AdminFaqPage } from "@/features/admin/faq/AdminFaqPage";
 import { AdminPayoutsPage } from "@/features/admin/payouts/AdminPayoutsPage";
@@ -60,6 +62,8 @@ export function App() {
             <Route element={<RequireAuth role="admin" />}>
               <Route path="/admin" element={<AdminPanelPage />} />
               <Route path="/admin/applications" element={<AdminApplicationsPage />} />
+              <Route path="/admin/clients" element={<AdminClientsPage />} />
+              <Route path="/admin/clients/new" element={<ClientEditorPage />} />
               <Route path="/admin/partners" element={<AdminPartnersPage />} />
               <Route path="/admin/partners/new" element={<PartnerEditorPage />} />
               <Route path="/admin/partners/:agentId/edit" element={<PartnerEditorPage />} />

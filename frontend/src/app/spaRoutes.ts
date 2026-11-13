@@ -19,6 +19,8 @@ export const SPA_PATHS: readonly string[] = [
   "/profile",
   "/admin",
   "/admin/applications",
+  "/admin/clients",
+  "/admin/clients/new",
   "/admin/partners",
   "/admin/partners/new",
   "/admin/network/rates",

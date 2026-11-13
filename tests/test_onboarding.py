@@ -50,5 +50,7 @@ async def test_agent_with_format_and_admins_use_the_cabinet_freely() -> None:
     with_format = _agent(employment_format=EmploymentFormat.SELF_EMPLOYED)
     assert await require_agent(_request("/cabinet"), _FakeSession(with_format)) is with_format
 
-    admin = _agent(role=AgentRole.ADMIN)
-    assert await require_agent(_request("/admin"), _FakeSession(admin)) is admin
+    admin = _agent(role=AgentRole.ADMIN, totp_enabled=True)
+    request = _request("/admin")
+    request.session["admin_2fa_verified"] = True
+    assert await require_agent(request, _FakeSession(admin)) is admin

@@ -48,6 +48,27 @@ const GROUPS = [
     ],
   },
   {
+    id: "clients",
+    title: "Действующие клиенты",
+    icon: "partners",
+    tone: "blue",
+    description: "Клиенты из Битрикс24 и текущие суммы к выплате",
+    actions: [
+      {
+        url: "/admin/clients",
+        title: "Все действующие клиенты",
+        description: "Поиск клиентов, сделки и текущие выплаты.",
+        icon: "partners",
+      },
+      {
+        url: "/admin/clients/new",
+        title: "Добавить клиента",
+        description: "Привяжите существующую сделку к партнёру.",
+        icon: "add",
+      },
+    ],
+  },
+  {
     id: "payments",
     title: "Выплаты",
     icon: "payments",
@@ -145,6 +166,8 @@ export function AdminPanelPage() {
               .filter(
                 (action) =>
                   action.url === "/admin/partners/new" ||
+                  (action.url === "/admin/clients/new" &&
+                    data.sections.some((section) => section.url === "/admin/clients")) ||
                   data.sections.some((section) => section.url === action.url),
               )
               .map((action) => (

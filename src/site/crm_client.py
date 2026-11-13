@@ -10,6 +10,37 @@ logger = logging.getLogger(__name__)
 
 
 class CRMClient:
+    async def get_deal_stage_labels(self) -> dict[str, str]:
+        settings = get_settings()
+        async with httpx.AsyncClient(timeout=20) as client:
+            response = await client.get(
+                f"{settings.crm_service_url.rstrip('/')}/internal/deal-stage-labels",
+                headers={"X-Internal-Token": settings.internal_service_token},
+            )
+        response.raise_for_status()
+        return response.json()
+
+    async def search_existing_clients(self, query: str, page: int = 1) -> dict:
+        settings = get_settings()
+        async with httpx.AsyncClient(timeout=45) as client:
+            response = await client.get(
+                f"{settings.crm_service_url.rstrip('/')}/internal/clients/search",
+                headers={"X-Internal-Token": settings.internal_service_token},
+                params={"q": query, "page": page},
+            )
+        response.raise_for_status()
+        return response.json()
+
+    async def get_existing_client(self, deal_id: str) -> dict:
+        settings = get_settings()
+        async with httpx.AsyncClient(timeout=20) as client:
+            response = await client.get(
+                f"{settings.crm_service_url.rstrip('/')}/internal/deals/{deal_id}/existing-client",
+                headers={"X-Internal-Token": settings.internal_service_token},
+            )
+        response.raise_for_status()
+        return response.json()
+
     async def create_lead(self, application: ReferralApplication, agent_name: str) -> str:
         settings = get_settings()
         async with httpx.AsyncClient(timeout=20) as client:

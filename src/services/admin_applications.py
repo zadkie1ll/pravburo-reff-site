@@ -4,6 +4,7 @@ from pravburo_ref_common.models import (
     Agent,
     AgentRole,
     DeliveryStatus,
+    ExistingClientImport,
     ProcessingStatus,
     ReferralApplication,
 )
@@ -62,7 +63,12 @@ async def list_applications(
     query = q.strip()
     page = max(page, 1)
 
-    count_stmt = select(func.count(ReferralApplication.id))
+    not_imported = (
+        ~select(ExistingClientImport.application_id)
+        .where(ExistingClientImport.application_id == ReferralApplication.id)
+        .exists()
+    )
+    count_stmt = select(func.count(ReferralApplication.id)).where(not_imported)
     if query:
         count_stmt = _search_filter(count_stmt, query)
     if status:
@@ -73,6 +79,7 @@ async def list_applications(
 
     stmt = (
         select(ReferralApplication)
+        .where(not_imported)
         .join(Agent, Agent.id == ReferralApplication.agent_id)
         .order_by(ReferralApplication.created_at.desc(), ReferralApplication.id.desc())
         .add_columns(Agent.display_name, Agent.email)

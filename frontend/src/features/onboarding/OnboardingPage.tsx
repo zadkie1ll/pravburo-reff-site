@@ -48,7 +48,7 @@ export function OnboardingPage() {
       <section className="hero">
         <p className="eyebrow">Первый вход</p>
         <h1>Данные для выплат</h1>
-        <p>Заполните данные, чтобы бухгалтерия знала, куда перечислять вознаграждение.</p>
+        <p>Укажите данные и реквизиты для получения вознаграждения.</p>
       </section>
 
       <section className="card">

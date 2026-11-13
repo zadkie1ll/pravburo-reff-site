@@ -92,6 +92,14 @@ export function PartnerCards({ rows, disabled, onNote, onBlock, onUnblock }: Par
               {!partner.is_admin && (
                 <AppLink
                   className="partner-edit-button"
+                  to={`/admin/clients/new?agent_id=${partner.id}`}
+                >
+                  <AdminIcon name="add" /> Добавить клиента
+                </AppLink>
+              )}
+              {!partner.is_admin && (
+                <AppLink
+                  className="partner-edit-button"
                   to={`/admin/partners/${partner.id}/edit`}
                   aria-label={`Редактировать партнёра: ${name}`}
                 >

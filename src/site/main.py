@@ -23,6 +23,7 @@ from src.web.routes.admin_2fa import router as admin_2fa_router
 from src.web.routes.api_admin import router as api_admin_router
 from src.web.routes.api_admin_2fa import router as api_admin_2fa_router
 from src.web.routes.api_admin_applications import router as api_admin_applications_router
+from src.web.routes.api_admin_clients import router as api_admin_clients_router
 from src.web.routes.api_admin_faq import router as api_admin_faq_router
 from src.web.routes.api_admin_network import router as api_admin_network_router
 from src.web.routes.api_admin_partners import router as api_admin_partners_router
@@ -88,6 +89,7 @@ app.include_router(health_router)
 app.include_router(api_v1_router)
 app.include_router(api_site_router)
 app.include_router(api_admin_router)
+app.include_router(api_admin_clients_router)
 app.include_router(api_admin_applications_router)
 app.include_router(api_admin_partners_router)
 app.include_router(api_admin_network_router)

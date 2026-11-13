@@ -4,7 +4,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from pravburo_ref_common.contracts import DealStageUpdate, RewardNotify
 from pravburo_ref_common.database import get_session
-from pravburo_ref_common.models import Agent, ReferralApplication, RewardType
+from pravburo_ref_common.models import Agent, ExistingClientImport, ReferralApplication, RewardType
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.email import send_reward_notice
@@ -27,6 +28,24 @@ REWARD_NOTICE_TEXT = {
 }
 
 
+@router.get(
+    "/internal/existing-clients/deals/{deal_id}", dependencies=[Depends(require_internal_token)]
+)
+async def existing_deal_binding(deal_id: str, session: Session) -> dict[str, int]:
+    row = (
+        await session.execute(
+            select(ReferralApplication)
+            .join(
+                ExistingClientImport, ExistingClientImport.application_id == ReferralApplication.id
+            )
+            .where(ExistingClientImport.deal_id == deal_id)
+        )
+    ).scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Existing client not found")
+    return {"agent_id": row.agent_id, "application_id": row.id}
+
+
 @router.post(
     "/internal/applications/{application_id}/stage",
     dependencies=[Depends(require_internal_token)],
@@ -39,6 +58,15 @@ async def update_deal_stage(
     application = await session.get(ReferralApplication, application_id)
     if application is None:
         raise HTTPException(status_code=404, detail="Application not found")
+
+    imported = await session.get(ExistingClientImport, application_id)
+    if imported is not None and imported.deal_id != payload.deal_id:
+        raise HTTPException(status_code=409, detail="Existing client deal mismatch")
+    deal_import = await session.scalar(
+        select(ExistingClientImport).where(ExistingClientImport.deal_id == payload.deal_id)
+    )
+    if deal_import is not None and deal_import.application_id != application_id:
+        raise HTTPException(status_code=409, detail="Existing client attribution mismatch")
 
     application.bitrix_deal_id = payload.deal_id
     new_label = stage_label(payload.stage_code)

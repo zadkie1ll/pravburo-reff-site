@@ -32,6 +32,8 @@ SPA_PATHS = (
     "/profile",
     "/admin",
     "/admin/applications",
+    "/admin/clients",
+    "/admin/clients/new",
     "/admin/partners",
     "/admin/partners/new",
     "/admin/network/rates",

@@ -8,13 +8,14 @@ from typing import Protocol
 from pravburo_ref_common.models import (
     Agent,
     DeliveryStatus,
+    ExistingClientImport,
     ReferralApplication,
     ReferralLinkVisit,
     Reward,
     RewardStatus,
     RewardType,
 )
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.security import masked_phone, normalize_phone
@@ -59,6 +60,11 @@ async def get_link_stats(session: AsyncSession, agent_id: int) -> LinkStats:
         select(func.count())
         .select_from(ReferralApplication)
         .where(ReferralApplication.agent_id == agent_id)
+        .where(
+            ~select(ExistingClientImport.application_id)
+            .where(ExistingClientImport.application_id == ReferralApplication.id)
+            .exists()
+        )
     )
     # Договор заключён, когда клиент попал в воронку "Сопровождение": за это начисляется
     # аванс. Отклонённые авансы не считаем, один клиент - один договор.
@@ -108,6 +114,11 @@ async def get_application_rows(session: AsyncSession, agent_id: int) -> list[App
         await session.scalars(
             select(ReferralApplication)
             .where(ReferralApplication.agent_id == agent_id)
+            .where(
+                ~select(ExistingClientImport.application_id)
+                .where(ExistingClientImport.application_id == ReferralApplication.id)
+                .exists()
+            )
             .order_by(ReferralApplication.created_at.desc())
         )
     ).all()
@@ -209,7 +220,7 @@ async def get_network_client_rows(session: AsyncSession, agent_id: int) -> list[
                 + (f" ({format_amount(r.amount)})" if r.amount is not None else "")
                 for r in rewards_by_application.get(application.id, [])
             )
-            or "Договор не заключен",
+            or ("Действующий клиент" if application.bitrix_deal_id else "Договор не заключен"),
             stage=stage_label(application.deal_stage_code) or DEFAULT_STAGE_LABEL,
             reward_totals=_reward_totals(rewards_by_application.get(application.id, [])),
         )
@@ -236,6 +247,8 @@ async def _fixation_is_active(session: AsyncSession, application: ReferralApplic
     Reward exists), otherwise the fixation rots 180 days after the first
     application - after that, another agent may claim the same phone.
     """
+    if await session.get(ExistingClientImport, application.id) is not None:
+        return True
     has_reward = (
         await session.scalar(
             select(Reward.id).where(Reward.application_id == application.id).limit(1)
@@ -254,6 +267,10 @@ async def create_first_application(
     lead_delivery: LeadDeliveryGateway,
 ) -> tuple[ReferralApplication, bool]:
     phone = normalize_phone(data.phone)
+    await session.execute(
+        text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
+        {"key": f"existing-phone:{phone}"},
+    )
     latest = await session.scalar(
         select(ReferralApplication)
         .where(ReferralApplication.phone_normalized == phone)

@@ -18,6 +18,33 @@ const PANEL = {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("AdminPanelPage", () => {
+  it("opens a separate existing-clients section with list and import actions", async () => {
+    mockApi({
+      "/site/admin": {
+        body: {
+          sections: [...PANEL.sections, { title: "Действующие клиенты", url: "/admin/clients" }],
+        },
+      },
+    });
+    renderWithProviders(
+      <Routes>
+        <Route path="/admin" element={<AdminPanelPage />} />
+      </Routes>,
+      "/admin",
+    );
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("link", { name: "Действующие клиенты" }));
+    expect(screen.getByRole("link", { name: "Все действующие клиенты" })).toHaveAttribute(
+      "href",
+      "/admin/clients",
+    );
+    expect(screen.getByRole("link", { name: "Добавить клиента" })).toHaveAttribute(
+      "href",
+      "/admin/clients/new",
+    );
+    expect(screen.queryByRole("link", { name: "Все заявки" })).not.toBeInTheDocument();
+  });
+
   it("groups tools in application tiles and opens the selected section", async () => {
     mockApi({ "/site/admin": { body: PANEL } });
     renderWithProviders(

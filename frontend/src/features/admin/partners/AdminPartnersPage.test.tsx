@@ -54,6 +54,10 @@ describe("AdminPartnersPage", () => {
     expect(screen.getByText("звонить после 18")).toBeInTheDocument();
     expect(screen.getByLabelText(/^Заметка:/)).not.toBeVisible();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Добавить клиента" })).toHaveAttribute(
+      "href",
+      "/admin/clients/new?agent_id=7",
+    );
     expect(
       screen.getByRole("link", { name: "Редактировать партнёра: Ольга Партнёрова" }),
     ).toHaveAttribute("href", "/admin/partners/7/edit");
