@@ -48,6 +48,18 @@ describe("PartnerEditorPage", () => {
     });
   });
 
+  it("creates a partner without email", async () => {
+    const api = mockApi({ "/site/admin/partners": { body: { ...PARTNER, email: null } } });
+    renderEditor("/admin/partners/new");
+    const user = userEvent.setup();
+    expect(screen.getByLabelText("Почта")).not.toBeRequired();
+    await user.type(screen.getByLabelText("ФИО"), "Анна Партнёрова");
+    await user.type(screen.getByLabelText("Реквизиты для выплат"), "Карта 2200");
+    await user.click(screen.getByRole("button", { name: "Создать партнёра" }));
+    expect(await screen.findByText("Список партнёров")).toBeInTheDocument();
+    expect(sentBody(api, "/site/admin/partners")).toMatchObject({ email: "" });
+  });
+
   it("loads existing details, edits payment details and preserves login email", async () => {
     const api = mockApi({ "/partners/7": { body: PARTNER } });
     renderEditor("/admin/partners/7/edit");

@@ -2,6 +2,7 @@
 
 import logging
 import secrets
+import string
 from dataclasses import dataclass
 
 from pravburo_ref_common.models import (
@@ -20,6 +21,17 @@ from src.services.agents import link_agent_to_referrer
 from src.services.profile import validate_inn
 
 logger = logging.getLogger(__name__)
+
+
+def generate_partner_password() -> str:
+    characters = [
+        secrets.choice(string.ascii_lowercase),
+        secrets.choice(string.ascii_uppercase),
+        secrets.choice(string.digits),
+        *(secrets.choice(string.ascii_letters + string.digits) for _ in range(5)),
+    ]
+    secrets.SystemRandom().shuffle(characters)
+    return "".join(characters)
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,27 +79,35 @@ async def _commit(session: AsyncSession) -> None:
 
 
 async def create_partner(
-    session: AsyncSession, admin_id: int, email: str, data: PartnerInput
+    session: AsyncSession, admin_id: int, email: str | None, data: PartnerInput
 ) -> Agent:
-    email = normalize_email(email)
-    if not valid_email(email):
+    email = normalize_email(email or "") or None
+    if email is not None and not valid_email(email):
         raise ValueError("Укажите корректную почту")
     values = _validated(data)
-    if await session.scalar(select(Agent.id).where(func.lower(Agent.email) == email)) is not None:
+    if (
+        email is not None
+        and await session.scalar(select(Agent.id).where(func.lower(Agent.email) == email))
+        is not None
+    ):
         raise ValueError("Эта почта уже используется другим аккаунтом")
     await _check_phone(session, values["phone_normalized"], None)
+    password = generate_partner_password()
+    password_note = f"Пароль: {password}"
+    values["admin_note"] = (
+        f"{values['admin_note']}\n{password_note}" if values["admin_note"] else password_note
+    )
     agent = Agent(email=email, role=AgentRole.AGENT, **values)
     session.add(agent)
     try:
         await session.flush()
-        # No temporary password is exposed to the administrator.
-        session.add(
-            AgentCredential(
-                agent_id=agent.id, password_hash=hash_password(secrets.token_urlsafe(48))
-            )
-        )
+        # The requested copy is kept only in the admin note; login uses the hash.
+        session.add(AgentCredential(agent_id=agent.id, password_hash=hash_password(password)))
         await link_agent_to_referrer(session, agent)
-        await session.execute(delete(PendingRegistration).where(PendingRegistration.email == email))
+        if email is not None:
+            await session.execute(
+                delete(PendingRegistration).where(PendingRegistration.email == email)
+            )
         await _commit(session)
     except IntegrityError as exc:
         await session.rollback()

@@ -32,11 +32,11 @@ export function LoginPage() {
     <AuthCard backTo="/" eyebrow="Личный кабинет" title="Войти" error={error}>
       <form onSubmit={submit}>
         <Field
-          label="Почта"
-          type="email"
+          label="Почта или номер телефона"
+          type="text"
           name="email"
           required
-          autoComplete="email"
+          autoComplete="username"
           value={email}
           onChange={(event) => setEmail(event.target.value)}
         />

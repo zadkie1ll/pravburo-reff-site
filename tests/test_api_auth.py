@@ -89,11 +89,16 @@ def test_agent_login_goes_to_cabinet_and_starts_a_session(client, monkeypatch) -
     ("totp_enabled", "expected"),
     [(False, "/admin/2fa/setup"), (True, "/admin/2fa/verify")],
 )
-def test_admin_login_goes_through_2fa(client, monkeypatch, totp_enabled, expected) -> None:
+@pytest.mark.parametrize("identifier", ["admin@example.com", "+79991112233"])
+def test_admin_login_goes_through_2fa(
+    client, monkeypatch, totp_enabled, expected, identifier
+) -> None:
     ADMIN.totp_enabled = totp_enabled
     _authenticates_as(monkeypatch, ADMIN)
 
-    response = client.post(LOGIN_URL, json=CREDENTIALS, headers=_csrf(client))
+    response = client.post(
+        LOGIN_URL, json={**CREDENTIALS, "email": identifier}, headers=_csrf(client)
+    )
 
     assert response.json() == {"next": expected}
 

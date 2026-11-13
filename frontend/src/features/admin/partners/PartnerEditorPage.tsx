@@ -67,7 +67,7 @@ function PartnerForm({ id, partner }: { id: number | null; partner?: PartnerDeta
             state: {
               info:
                 id === null
-                  ? "Партнёр создан. Для первого входа ему нужно выбрать «Забыли пароль?» и задать пароль по коду из письма."
+                  ? "Партнёр создан. Сгенерированный пароль сохранён в админской заметке. Передайте его партнёру для входа по почте или номеру из аккаунта."
                   : "Данные партнёра сохранены.",
             },
           }),
@@ -83,7 +83,7 @@ function PartnerForm({ id, partner }: { id: number | null; partner?: PartnerDeta
         <h1>{id === null ? "Новый партнёр" : "Редактировать партнёра"}</h1>
         <p className="admin-form-help">
           {id === null
-            ? "Заполните контакты и реквизиты. Партнёр задаст собственный пароль через «Забыли пароль?» на странице входа."
+            ? "Заполните контакты и реквизиты. Почта необязательна. Пароль из 8 английских букв и цифр создастся автоматически и сохранится в админской заметке. Для входа укажите хотя бы почту или телефон."
             : "Обновите личные данные и реквизиты. Пригласивший партнёр, история начислений и доступ к аккаунту сохранятся."}
         </p>
         {save.isError && (
@@ -108,7 +108,6 @@ function PartnerForm({ id, partner }: { id: number | null; partner?: PartnerDeta
               type="email"
               autoComplete="email"
               maxLength={254}
-              required={id === null}
               readOnly={id !== null}
               value={email}
               onChange={(event) => setEmail(event.target.value)}
@@ -160,7 +159,7 @@ function PartnerForm({ id, partner }: { id: number | null; partner?: PartnerDeta
               <textarea
                 name="admin_note"
                 rows={3}
-                maxLength={2000}
+                maxLength={id === null ? 1983 : 2000}
                 value={note}
                 onChange={(event) => setNote(event.target.value)}
               />

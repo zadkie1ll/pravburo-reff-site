@@ -78,7 +78,7 @@ async def login(request: Request, session: Session, body: LoginRequest) -> NextR
         raise ApiError(429, "rate_limited", "Слишком много попыток входа. Попробуйте позже.")
     agent = await authenticate(session, body.email, body.password)
     if agent is None:
-        raise ApiError(400, "invalid_credentials", "Неверная почта или пароль")
+        raise ApiError(400, "invalid_credentials", "Неверная почта, номер телефона или пароль")
     if not agent.is_active:
         message = "Аккаунт заблокирован."
         if agent.blocked_reason:

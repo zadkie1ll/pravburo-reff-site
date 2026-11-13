@@ -15,7 +15,7 @@ from pravburo_ref_common.models import (
     Reward,
     RewardStatus,
 )
-from sqlalchemy import delete, select
+from sqlalchemy import delete, or_, select
 
 from src.core.auth import begin_password_reset, confirm_password_reset
 from src.core.security import hash_password, verify_password
@@ -102,7 +102,12 @@ async def world() -> AsyncIterator[SimpleNamespace]:
             agent_ids = list(
                 (
                     await session.scalars(
-                        select(Agent.id).where(Agent.email.like(f"%{marker}@example.test"))
+                        select(Agent.id).where(
+                            or_(
+                                Agent.email.like(f"%{marker}@example.test"),
+                                Agent.display_name == f"Без почты {marker}",
+                            )
+                        )
                     )
                 ).all()
             )
@@ -133,7 +138,11 @@ async def test_create_partner_with_profile_and_personal_password_setup(world):
         agent = await session.get(Agent, data["id"])
         assert agent.role == AgentRole.AGENT
         assert agent.payout_details == PROFILE["payout_details"]
-        assert await session.get(AgentCredential, agent.id) is not None
+        credential = await session.get(AgentCredential, agent.id)
+        password = agent.admin_note.rsplit("Пароль: ", 1)[1]
+        assert len(password) == 8
+        assert agent.admin_note.startswith(PROFILE["admin_note"] + "\n")
+        assert verify_password(password, credential.password_hash)
         pending, code = await begin_password_reset(session, world.email)
         await confirm_password_reset(session, pending.token, code, "own-password-123")
         credential = await session.get(AgentCredential, agent.id)
@@ -220,3 +229,23 @@ async def test_new_partner_can_be_linked_to_an_existing_client_application(world
     async with session_factory() as session:
         agent = await session.get(Agent, response.json()["id"])
         assert agent.invited_by_agent_id == world.partner.id
+
+
+@pytest.mark.parametrize("email_fields", [{}, {"email": ""}, {"email": "   "}, {"email": None}])
+async def test_admin_can_create_multiple_partners_without_email(world, email_fields):
+    for _ in range(2):
+        response = await world.post(
+            URL, {**PROFILE, "display_name": f"Без почты {world.marker}", **email_fields}
+        )
+        assert response.status_code == 201
+        assert response.json()["email"] is None
+        async with session_factory() as session:
+            agent = await session.get(Agent, response.json()["id"])
+            assert agent.email is None
+            assert agent.role == AgentRole.AGENT
+            assert agent.payout_details == PROFILE["payout_details"]
+
+
+async def test_nonempty_invalid_email_is_still_refused(world):
+    response = await world.post(URL, {**PROFILE, "email": "not-an-email"})
+    assert response.status_code == 400

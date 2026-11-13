@@ -20,6 +20,7 @@ from src.core.security import (
     hash_code,
     hash_password,
     normalize_email,
+    normalize_phone,
     verify_password,
 )
 from src.core.totp import generate_secret, verify_totp
@@ -34,12 +35,25 @@ class RegistrationProfile:
 
 
 async def authenticate(session: AsyncSession, email: str, password: str) -> Agent | None:
-    normalized = normalize_email(email)
+    identifier = email.strip()
+    if "@" in identifier:
+        account_filter = Agent.email == normalize_email(identifier)
+    else:
+        # Accept ordinary phone formatting, but never discard arbitrary letters.
+        if not identifier or any(
+            character not in "+-(). " and not character.isdecimal() for character in identifier
+        ):
+            return None
+        try:
+            phone = normalize_phone(identifier)
+        except ValueError:
+            return None
+        account_filter = Agent.phone_normalized == phone
     row = (
         await session.execute(
             select(Agent, AgentCredential.password_hash)
             .join(AgentCredential, AgentCredential.agent_id == Agent.id)
-            .where(Agent.email == normalized)
+            .where(account_filter)
         )
     ).one_or_none()
     if row is None or not verify_password(password, row[1]):

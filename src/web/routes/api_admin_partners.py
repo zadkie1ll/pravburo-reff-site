@@ -60,7 +60,9 @@ class PartnerProfileRequest(BaseModel):
 
 
 class PartnerCreateRequest(PartnerProfileRequest):
-    email: str = Field(min_length=1, max_length=254)
+    email: str | None = Field(default=None, max_length=254)
+    # Leave room for a newline and the automatically generated password note.
+    admin_note: str = Field(default="", max_length=1983)
 
 
 class PartnerDetails(BaseModel):

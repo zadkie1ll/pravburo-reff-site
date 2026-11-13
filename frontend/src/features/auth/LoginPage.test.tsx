@@ -9,9 +9,9 @@ import { LoginPage } from "./LoginPage";
 
 const assign = vi.fn();
 
-async function fillAndSubmit() {
+async function fillAndSubmit(identifier = "a@example.com") {
   const user = userEvent.setup();
-  await user.type(screen.getByLabelText("Почта"), "a@example.com");
+  await user.type(screen.getByLabelText("Почта или номер телефона"), identifier);
   await user.type(screen.getByLabelText("Пароль"), "secret1");
   const button = screen.getByRole("button", { name: "Войти" });
   await waitFor(() => expect(button).toBeEnabled());
@@ -35,6 +35,18 @@ describe("LoginPage", () => {
     const call = api.mock.calls.find(([url]) => url.endsWith("/auth/login"));
     expect(call?.[1]?.headers).toMatchObject({ "X-CSRF-Token": "tok" });
     expect(sentBody(api, "/auth/login")).toEqual({ email: "a@example.com", password: "secret1" });
+  });
+
+  it("accepts a phone number in the same login field", async () => {
+    const api = mockApi({ "/auth/login": { body: { next: "/cabinet" } } });
+    vi.stubGlobal("location", { assign });
+    renderWithProviders(<LoginPage />);
+    await fillAndSubmit("8 (999) 111-22-33");
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("/cabinet"));
+    expect(sentBody(api, "/auth/login")).toEqual({
+      email: "8 (999) 111-22-33",
+      password: "secret1",
+    });
   });
 
   it("shows the backend error and does not navigate", async () => {
