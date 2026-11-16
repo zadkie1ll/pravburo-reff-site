@@ -78,16 +78,17 @@ def _status_slug(reward: Reward, overdue_days: int, today: date) -> str:
         return "pending"
     if reward.paid_at is not None:
         return "paid"
-    if reward.decided_at is not None:
-        due = reward.decided_at.date() + timedelta(days=overdue_days)
-        if due < today:
-            return "overdue"
+    due = _target_date(reward, overdue_days)
+    if due is not None and due < today:
+        return "overdue"
     return "scheduled"
 
 
 def _target_date(reward: Reward, overdue_days: int) -> date | None:
     if reward.paid_at is not None:
         return reward.paid_at.date()
+    if reward.payout_due_date is not None:
+        return reward.payout_due_date
     if reward.decided_at is not None:
         return reward.decided_at.date() + timedelta(days=overdue_days)
     return None
@@ -162,7 +163,7 @@ def build_calendar(
 
 
 async def mark_paid(session: AsyncSession, reward_id: int) -> Reward | None:
-    reward = await session.get(Reward, reward_id)
+    reward = await session.get(Reward, reward_id, with_for_update=True, populate_existing=True)
     if reward is None or reward.status != RewardStatus.APPROVED or reward.paid_at is not None:
         return None
     reward.paid_at = datetime.now(UTC)

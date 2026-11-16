@@ -12,6 +12,7 @@ import { AdminApplicationsPage } from "@/features/admin/applications/AdminApplic
 import { TwoFactorSetupPage } from "@/features/admin/twofactor/TwoFactorSetupPage";
 import { TwoFactorVerifyPage } from "@/features/admin/twofactor/TwoFactorVerifyPage";
 import { AdminClientsPage } from "@/features/admin/clients/AdminClientsPage";
+import { ClientWorkflowPage } from "@/features/admin/clients/ClientWorkflowPage";
 import { ClientEditorPage } from "@/features/admin/clients/ClientEditorPage";
 import { AdminPanelPage } from "@/features/admin/AdminPanelPage";
 import { AdminFaqPage } from "@/features/admin/faq/AdminFaqPage";
@@ -64,6 +65,7 @@ export function App() {
               <Route path="/admin/applications" element={<AdminApplicationsPage />} />
               <Route path="/admin/clients" element={<AdminClientsPage />} />
               <Route path="/admin/clients/new" element={<ClientEditorPage />} />
+              <Route path="/admin/clients/:id/workflow" element={<ClientWorkflowPage />} />
               <Route path="/admin/partners" element={<AdminPartnersPage />} />
               <Route path="/admin/partners/new" element={<PartnerEditorPage />} />
               <Route path="/admin/partners/:agentId/edit" element={<PartnerEditorPage />} />

@@ -155,11 +155,13 @@ describe("AdminPayoutsPage", () => {
     expect(screen.queryByText("Иван Клиентов")).not.toBeInTheDocument();
   });
 
-  it("explains the planned date with the current overdue period", async () => {
+  it("explains explicit dates and the fallback period from approval", async () => {
     mockApi({ [PATH]: calendar() });
     renderWithProviders(<AdminPayoutsPage />, PATH);
 
-    expect(await screen.findByText(/одобрение \+ 14 дн\./)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/На календаре показана заданная дата выплаты/),
+    ).toHaveTextContent(/Если дата не задана, срок считается от одобрения: \+14 дн\./);
     expect(screen.getByLabelText("Просрочка через, дней")).toHaveValue(14);
   });
 

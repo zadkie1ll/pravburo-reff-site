@@ -1,6 +1,7 @@
 """Import a local client binding without submitting a lead or replaying past rewards."""
 
 import logging
+from datetime import date
 from decimal import Decimal, InvalidOperation
 
 from pravburo_ref_common.models import (
@@ -19,6 +20,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.security import normalize_phone
+from src.services.client_workflow import WorkflowInput, save_workflow
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +67,8 @@ async def import_existing_client(
     phone: str,
     admin_note: str,
     current_amount: Decimal | None,
+    payout_due_date: date | None = None,
+    workflow: WorkflowInput | None = None,
 ) -> ExistingClientImport:
     deal_id = snapshot["deal_id"]
     name = full_name.strip()
@@ -75,6 +79,10 @@ async def import_existing_client(
     if actual_phone and normalize_phone(actual_phone) != phone:
         raise ValueError("Телефон не совпадает с контактом сделки Битрикса")
     amount = current_balance(current_amount)
+    if workflow is not None and amount is not None:
+        raise ValueError("Выберите учёт по этапам или единую сумму выплаты")
+    if payout_due_date is not None and amount is None:
+        raise ValueError("Укажите сумму к выплате для выбранной даты")
     # Serialize both deal imports and client-phone imports across workers.
     for key in sorted([f"existing-deal:{deal_id}", f"existing-phone:{phone}"]):
         await session.execute(
@@ -140,6 +148,7 @@ async def import_existing_client(
                 agent_id=agent_id,
                 reward_type=RewardType.MAIN,
                 amount=amount,
+                payout_due_date=payout_due_date,
                 status=RewardStatus.PENDING,
             )
             session.add(reward)
@@ -156,6 +165,9 @@ async def import_existing_client(
             admin_note=admin_note.strip() or None,
         )
         session.add(record)
+        await session.flush()
+        if workflow is not None:
+            await save_workflow(session, record, workflow, admin_id)
         await session.commit()
         await session.refresh(record)
     except IntegrityError as exc:
@@ -167,4 +179,122 @@ async def import_existing_client(
         agent_id,
         application.id,
     )
+    return record
+
+
+async def update_current_payout(
+    session: AsyncSession,
+    *,
+    application_id: int,
+    admin_id: int,
+    amount: Decimal,
+    payout_due_date: date,
+) -> ExistingClientImport | None:
+    amount = current_balance(amount)
+    record = await session.get(ExistingClientImport, application_id, with_for_update=True)
+    if record is None:
+        return None
+    if record.workflow_data is not None:
+        raise ExistingClientConflict(
+            "Откройте договор и выплаты клиента для редактирования по этапам"
+        )
+    reward = (
+        await session.get(
+            Reward, record.current_reward_id, with_for_update=True, populate_existing=True
+        )
+        if record.current_reward_id is not None
+        else None
+    )
+    if record.current_reward_id is not None and reward is None:
+        raise ExistingClientConflict("Начисление не найдено. Обновите список клиентов")
+    if reward is not None:
+        if reward.paid_at is not None or reward.status == RewardStatus.REJECTED:
+            raise ExistingClientConflict("Выплаченное или отклонённое начисление изменить нельзя")
+        if reward.payout_due_date != payout_due_date:
+            reward.due_notice_sent_at = None
+            reward.overdue_notice_sent_at = None
+        reward.amount = amount
+        reward.payout_due_date = payout_due_date
+    else:
+        # Never replace an automatically created reward with a manual balance.
+        application = await session.get(ReferralApplication, application_id)
+        if (
+            await session.scalar(
+                select(Reward.id)
+                .where(
+                    Reward.deal_id == record.deal_id,
+                    Reward.agent_id == application.agent_id,
+                    Reward.reward_type == RewardType.MAIN,
+                )
+                .limit(1)
+            )
+            is not None
+        ):
+            raise ExistingClientConflict(
+                "По сделке уже есть основное начисление. Проверьте начисления"
+            )
+        reward = Reward(
+            deal_id=record.deal_id,
+            application_id=application_id,
+            agent_id=application.agent_id,
+            reward_type=RewardType.MAIN,
+            status=RewardStatus.PENDING,
+            amount=amount,
+            payout_due_date=payout_due_date,
+        )
+        session.add(reward)
+        try:
+            await session.flush()
+        except IntegrityError as exc:
+            await session.rollback()
+            raise ExistingClientConflict(
+                "Начисление уже создано. Обновите список клиентов"
+            ) from exc
+        record.current_reward_id = reward.id
+        record.excluded_reward_types = list(
+            dict.fromkeys([*record.excluded_reward_types, RewardType.MAIN.value])
+        )
+    await session.commit()
+    logger.info("Imported payout updated: admin_id=%s reward_id=%s", admin_id, reward.id)
+    return record
+
+
+async def update_existing_client(
+    session: AsyncSession,
+    *,
+    application_id: int,
+    admin_id: int,
+    full_name: str,
+    phone: str,
+    admin_note: str,
+) -> ExistingClientImport | None:
+    name = full_name.strip()
+    if not name:
+        raise ValueError("Укажите ФИО клиента")
+    phone = normalize_phone(phone)
+    record = await session.get(ExistingClientImport, application_id, with_for_update=True)
+    if record is None:
+        return None
+    application = await session.get(ReferralApplication, application_id, with_for_update=True)
+    await session.execute(
+        text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"),
+        {"key": f"existing-phone:{phone}"},
+    )
+    if (
+        await session.scalar(
+            select(ReferralApplication.id)
+            .where(
+                ReferralApplication.phone_normalized == phone,
+                ReferralApplication.id != application_id,
+            )
+            .limit(1)
+        )
+        is not None
+    ):
+        raise ExistingClientConflict("Клиент с таким телефоном уже есть в системе")
+    application.full_name = name
+    application.phone_normalized = phone
+    record.admin_note = admin_note.strip() or None
+    await session.commit()
+    logger.info("Existing client updated: admin_id=%s application_id=%s", admin_id, application_id)
     return record

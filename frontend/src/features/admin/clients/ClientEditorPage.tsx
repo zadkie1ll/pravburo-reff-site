@@ -16,6 +16,7 @@ import {
 } from "./api";
 import { BitrixLink } from "./BitrixLink";
 import { PartnerSelector } from "./PartnerSelector";
+import { WorkflowFields, readWorkflow, workflowError } from "./WorkflowFields";
 
 export function ClientEditorPage() {
   usePageTitle("Добавить действующего клиента");
@@ -30,7 +31,7 @@ function ClientForm({ initialAgent }: { initialAgent: number | null }) {
   const [dealId, setDealId] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [amount, setAmount] = useState("");
+
   const [note, setNote] = useState("");
   const [validation, setValidation] = useState("");
   const lookup = useFindDeal();
@@ -93,7 +94,7 @@ function ClientForm({ initialAgent }: { initialAgent: number | null }) {
     }
   }
 
-  function submit(event: FormEvent) {
+  function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (finding || save.isPending) return;
     const normalizedId = parseDealReference(dealId);
@@ -105,10 +106,6 @@ function ClientForm({ initialAgent }: { initialAgent: number | null }) {
       setValidation("Сначала нажмите «Найти сделку», чтобы проверить ссылку.");
       return;
     }
-    if (amount !== "" && (!Number.isFinite(Number(amount)) || Number(amount) <= 0)) {
-      setValidation("Укажите положительную сумму в рублях или оставьте поле пустым.");
-      return;
-    }
     setValidation("");
     save.mutate(
       {
@@ -116,17 +113,15 @@ function ClientForm({ initialAgent }: { initialAgent: number | null }) {
         deal_id: snapshot ? String(snapshot.deal_id) : normalizedId,
         full_name: name.trim(),
         phone: phone.trim(),
-        current_amount: amount === "" ? null : amount,
+        current_amount: null,
+        workflow: readWorkflow(event.currentTarget),
         admin_note: note.trim(),
       },
       {
-        onSuccess: () =>
-          navigate(`/admin/clients${clientsSearch({ q: "", agentId, page: 1 })}`, {
+        onSuccess: (client) =>
+          navigate(`/admin/clients/${client.id}/workflow`, {
             state: {
-              info:
-                amount === ""
-                  ? "Действующий клиент добавлен без начального остатка к выплате."
-                  : "Действующий клиент добавлен. Текущая выплата ожидает обработки.",
+              info: "Клиент добавлен. Договор и выплаты сохранены.",
             },
           }),
       },
@@ -306,19 +301,6 @@ function ClientForm({ initialAgent }: { initialAgent: number | null }) {
                 value={phone}
                 onChange={(event) => setPhone(event.target.value)}
               />
-              <Field
-                label="К выплате партнёру"
-                name="current_amount"
-                type="number"
-                min="0.01"
-                step="0.01"
-                placeholder="Необязательно, ₽"
-                value={amount}
-                onChange={(event) => setAmount(event.target.value)}
-              />
-              <p className="admin-form-help">
-                Сумма в рублях, больше нуля. Оставьте пустой, если сейчас выплачивать нечего.
-              </p>
               <label className="admin-form-wide">
                 Заметка
                 <textarea
@@ -331,6 +313,14 @@ function ClientForm({ initialAgent }: { initialAgent: number | null }) {
               </label>
             </div>
           </fieldset>
+          <fieldset className="settlement-form-body" disabled={save.isPending}>
+            <WorkflowFields
+              key={`${agentId}-${snapshot?.deal_id ?? "manual"}`}
+              agentId={agentId}
+              firstPayment={snapshot?.first_payment ?? "0"}
+              paidInFull={snapshot?.paid_in_full ?? false}
+            />
+          </fieldset>
           {validation && (
             <p className="alert" role="alert">
               {validation}
@@ -338,7 +328,7 @@ function ClientForm({ initialAgent }: { initialAgent: number | null }) {
           )}
           {save.isError && (
             <p className="alert" role="alert">
-              {errorMessage(save.error)}
+              {workflowError(save.error)}
             </p>
           )}
           <div className="footer-actions">

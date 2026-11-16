@@ -30,6 +30,7 @@ from src.web.routes.api_admin_partners import router as api_admin_partners_route
 from src.web.routes.api_admin_payouts import router as api_admin_payouts_router
 from src.web.routes.api_auth import router as api_auth_router
 from src.web.routes.api_cabinet import router as api_cabinet_router
+from src.web.routes.api_client_workflow import router as api_client_workflow_router
 from src.web.routes.api_onboarding import router as api_onboarding_router
 from src.web.routes.api_payouts import router as api_payouts_router
 from src.web.routes.api_profile import router as api_profile_router
@@ -90,6 +91,7 @@ app.include_router(api_v1_router)
 app.include_router(api_site_router)
 app.include_router(api_admin_router)
 app.include_router(api_admin_clients_router)
+app.include_router(api_client_workflow_router)
 app.include_router(api_admin_applications_router)
 app.include_router(api_admin_partners_router)
 app.include_router(api_admin_network_router)

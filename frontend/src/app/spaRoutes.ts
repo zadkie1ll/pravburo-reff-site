@@ -36,9 +36,14 @@ export const SPA_PATH_PATTERNS: readonly string[] = [
   "/r/:referralCode",
   "/r/:referralCode/success",
   "/admin/partners/:agentId/edit",
+  "/admin/clients/:id/workflow",
 ];
 
 export function isSpaPath(path: string): boolean {
   const pathname = path.split(/[?#]/, 1)[0] ?? "";
-  return SPA_PATHS.includes(pathname) || /^\/admin\/partners\/\d+\/edit$/.test(pathname);
+  return (
+    SPA_PATHS.includes(pathname) ||
+    /^\/admin\/partners\/\d+\/edit$/.test(pathname) ||
+    /^\/admin\/clients\/\d+\/workflow$/.test(pathname)
+  );
 }

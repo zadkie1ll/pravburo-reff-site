@@ -14,11 +14,12 @@ PRODUCTION_KWARGS = {
 }
 
 
-def test_production_settings_are_valid_without_debug() -> None:
-    settings = Settings(**PRODUCTION_KWARGS)
+def test_production_settings_are_valid_without_debug(monkeypatch) -> None:
+    monkeypatch.delenv("APP_DEBUG", raising=False)
+    settings = Settings(_env_file=None, **PRODUCTION_KWARGS)
     assert settings.app_debug is False
 
 
 def test_app_debug_is_rejected_in_production() -> None:
     with pytest.raises(ValidationError, match="APP_DEBUG must be false in production"):
-        Settings(**{**PRODUCTION_KWARGS, "app_debug": True})
+        Settings(_env_file=None, **{**PRODUCTION_KWARGS, "app_debug": True})

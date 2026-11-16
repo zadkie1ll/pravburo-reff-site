@@ -3,7 +3,7 @@ from datetime import UTC, datetime, timedelta
 
 from pravburo_ref_common.database import session_factory
 from pravburo_ref_common.models import Agent, ReferralApplication, Reward, RewardStatus
-from sqlalchemy import select
+from sqlalchemy import or_, select
 
 from src.core.telegram import send_payout_due_notice, send_payout_overdue_notice
 from src.services.admin_payouts import get_overdue_days
@@ -25,14 +25,16 @@ async def check_payout_reminders() -> None:
             .where(
                 Reward.status == RewardStatus.APPROVED,
                 Reward.paid_at.is_(None),
-                Reward.decided_at.is_not(None),
+                or_(Reward.decided_at.is_not(None), Reward.payout_due_date.is_not(None)),
             )
         )
         rows = (await session.execute(stmt)).all()
 
         for reward, client_name, agent in rows:
             client_name = client_name or "—"
-            target_date = reward.decided_at.date() + timedelta(days=overdue_days)
+            target_date = reward.payout_due_date or (
+                reward.decided_at.date() + timedelta(days=overdue_days)
+            )
 
             if reward.due_notice_sent_at is None and today >= target_date:
                 try:

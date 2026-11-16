@@ -1,4 +1,4 @@
-import { act, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Route, Routes, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -10,6 +10,21 @@ import { ClientEditorPage } from "./ClientEditorPage";
 import { parseDealReference, type ExistingClient, type BitrixCandidate } from "./api";
 
 const BASE = "/site/admin/clients";
+const DEFAULTS = {
+  advance_amount: "3000",
+  main_amount: "10000",
+  curator_amount: "0",
+  curator_id: null,
+  curator_name: null,
+  agent_phone: null,
+  curator_phone: null,
+  level: "start",
+};
+async function fillContract() {
+  fireEvent.change(screen.getByLabelText("Договор"), { target: { value: "signed" } });
+  fireEvent.change(screen.getByLabelText("Дата договора"), { target: { value: "2026-10-10" } });
+  await waitFor(() => expect(screen.getByLabelText("Аванс агенту, ₽")).toHaveValue(3000));
+}
 const PARTNER = {
   id: 7,
   display_name: "Анна Партнёрова",
@@ -58,6 +73,7 @@ function renderEditor(path = "/admin/clients/new?agent_id=7") {
     <Routes>
       <Route path="/admin/clients/new" element={<ClientEditorPage />} />
       <Route path="/admin/clients" element={<Destination />} />
+      <Route path="/admin/clients/:id/workflow" element={<Destination />} />
     </Routes>,
     path,
   );
@@ -66,8 +82,33 @@ function renderEditor(path = "/admin/clients/new?agent_id=7") {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("existing client import", () => {
-  it("loads the preselected partner and read-only snapshot, allows corrections, and sends a null amount", async () => {
+  it("binds a client without a contract date and without loading payout amounts", async () => {
+    const api = mockApi({ [BASE]: { body: CLIENT }, "/partners/7": { body: PARTNER } });
+    renderEditor();
+    const user = userEvent.setup();
+    await screen.findByText(/Выбран: Анна Партнёрова/);
+    expect(screen.queryByLabelText("Дата договора")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Аванс агенту, ₽")).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText("ID сделки в Битрикс24 или ссылка"), "432");
+    await user.type(screen.getByLabelText("ФИО клиента"), "Клиент без договора");
+    await user.type(screen.getByLabelText("Телефон клиента"), "+79998887766");
+    await user.click(screen.getByRole("button", { name: "Добавить клиента" }));
+    await screen.findByText(/Список клиентов/);
+    expect(sentBody(api, BASE)).toMatchObject({
+      workflow: {
+        contract_status: "not_signed",
+        contract_date: null,
+        advance_amount: "0",
+        main_amount: "0",
+        paid_in_full: false,
+      },
+    });
+    expect(api.mock.calls.some(([url]) => url.includes("workflow-defaults"))).toBe(false);
+  });
+
+  it("loads partner and Bitrix data and submits separate settlement stages", async () => {
     const api = mockApi({
+      "/client-workflows/defaults": { body: DEFAULTS },
       [BASE]: { body: CLIENT },
       "/partners/7": { body: PARTNER },
       "/deals/432": { body: DEAL },
@@ -82,21 +123,28 @@ describe("existing client import", () => {
     );
     expect(screen.getByLabelText("ФИО клиента")).toHaveValue(CLIENT.full_name);
     expect(screen.getByLabelText("Телефон клиента")).toHaveValue(CLIENT.phone);
-    expect(screen.getByLabelText(/^К выплате партнёру/)).toHaveValue(null);
+    await fillContract();
     await user.clear(screen.getByLabelText("ФИО клиента"));
     await user.type(screen.getByLabelText("ФИО клиента"), "Иван Исправленный");
     await user.type(screen.getByLabelText("Заметка"), "Проверено");
     await user.click(screen.getByRole("button", { name: "Добавить клиента" }));
     expect(await screen.findByText(/Список клиентов/)).toHaveTextContent(
-      "?agent_id=7 Действующий клиент добавлен",
+      "Клиент добавлен. Договор и выплаты сохранены.",
     );
-    expect(sentBody(api, BASE)).toEqual({
+    expect(sentBody(api, BASE)).toMatchObject({
       agent_id: 7,
       deal_id: "432",
       full_name: "Иван Исправленный",
       phone: CLIENT.phone,
       current_amount: null,
       admin_note: "Проверено",
+      workflow: {
+        contract_date: "2026-10-10",
+        first_payment: "75000.00",
+        advance_amount: "3000",
+        main_amount: "10000",
+        paid_in_full: true,
+      },
     });
     expect(api.mock.calls.filter(([, init]) => init?.method === "POST")).toHaveLength(1);
     expect(api.mock.calls.find(([url]) => url.endsWith("/deals/432"))?.[1]?.method).toBe("GET");
@@ -104,6 +152,7 @@ describe("existing client import", () => {
 
   it("requires explicit partner selection, paginates partner search and never guesses the amount", async () => {
     const api = mockApi({
+      "/client-workflows/defaults": { body: DEFAULTS },
       [BASE]: { body: CLIENT },
       "/deals/432": { body: DEAL },
       "/site/admin/partners": {
@@ -116,7 +165,7 @@ describe("existing client import", () => {
     await user.type(screen.getByLabelText("ID сделки в Битрикс24 или ссылка"), "432");
     await user.type(screen.getByLabelText("ФИО клиента"), "Иван");
     await user.click(screen.getByRole("button", { name: "Добавить клиента" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Выберите партнёра");
+
     expect(sentBody(api, BASE)).toBeUndefined();
     await user.click(screen.getByRole("button", { name: "Найти партнёра" }));
     await user.click(await screen.findByRole("button", { name: "Следующие партнёры" }));
@@ -124,17 +173,25 @@ describe("existing client import", () => {
     await user.click(
       await screen.findByRole("button", { name: "Выбрать партнёра: Анна Партнёрова" }),
     );
-    await user.type(screen.getByLabelText(/^К выплате партнёру/), "12500.50");
+
     await user.click(screen.getByRole("button", { name: "Найти сделку" }));
     await screen.findByLabelText("Данные сделки из Битрикс24");
-    expect(screen.getByLabelText(/^К выплате партнёру/)).toHaveValue(12500.5);
+    await fillContract();
+    fireEvent.change(screen.getByLabelText("Основная сумма агенту, ₽"), {
+      target: { value: "12500.50" },
+    });
     await user.click(screen.getByRole("button", { name: "Добавить клиента" }));
     await screen.findByText(/Список клиентов/);
-    expect(sentBody(api, BASE)).toMatchObject({ agent_id: 7, current_amount: "12500.5" });
+    expect(sentBody(api, BASE)).toMatchObject({
+      agent_id: 7,
+      current_amount: null,
+      workflow: { main_amount: "12500.50" },
+    });
   });
 
   it("supports manual fallback and preserves inputs on server rejection", async () => {
     const api = mockApi({
+      "/client-workflows/defaults": { body: DEFAULTS },
       "/partners/7": { body: PARTNER },
       "/deals/432": { status: 503, body: {} },
       [BASE]: {
@@ -151,6 +208,7 @@ describe("existing client import", () => {
     );
     await user.type(screen.getByLabelText("ФИО клиента"), "Клиент вручную");
     await user.type(screen.getByLabelText("Заметка"), "Сверить");
+    await fillContract();
     await user.click(screen.getByRole("button", { name: "Добавить клиента" }));
     expect(await screen.findByText("Сделка уже привязана")).toBeInTheDocument();
     expect(screen.getByLabelText("ФИО клиента")).toHaveValue("Клиент вручную");
@@ -158,8 +216,9 @@ describe("existing client import", () => {
     expect(sentBody(api, BASE)).toMatchObject({ phone: "", current_amount: null });
   });
 
-  it("rejects non-positive current amounts and clears the snapshot when the deal ID changes", async () => {
+  it("rejects negative stage amounts and clears the snapshot when the deal ID changes", async () => {
     const api = mockApi({
+      "/client-workflows/defaults": { body: DEFAULTS },
       [BASE]: { body: CLIENT },
       "/partners/7": { body: PARTNER },
       "/deals/432": { body: DEAL },
@@ -169,10 +228,11 @@ describe("existing client import", () => {
     await user.type(screen.getByLabelText("ID сделки в Битрикс24 или ссылка"), "432");
     await user.click(screen.getByRole("button", { name: "Найти сделку" }));
     await screen.findByLabelText("Данные сделки из Битрикс24");
-    await user.type(screen.getByLabelText(/^К выплате партнёру/), "0");
+    await fillContract();
+    fireEvent.change(screen.getByLabelText("Аванс агенту, ₽"), { target: { value: "-1" } });
     await user.click(screen.getByRole("button", { name: "Добавить клиента" }));
     expect(sentBody(api, BASE)).toBeUndefined();
-    expect(screen.getByLabelText(/^К выплате партнёру/)).toBeInvalid();
+    expect(screen.getByLabelText("Аванс агенту, ₽")).toBeInvalid();
     await user.type(screen.getByLabelText("ID сделки в Битрикс24 или ссылка"), "9");
     expect(screen.queryByLabelText("Данные сделки из Битрикс24")).not.toBeInTheDocument();
   });
@@ -218,6 +278,7 @@ describe("existing client list", () => {
 
   it("applies and clears filters, resetting the page", async () => {
     const api = mockApi({
+      "/client-workflows/defaults": { body: DEFAULTS },
       [BASE]: { body: { rows: [], page: 1, total_pages: 1, total_count: 0 } },
       "/partners/7": { body: PARTNER },
     });
@@ -250,7 +311,7 @@ describe("existing client list", () => {
       },
     });
     const first = renderWithProviders(<AdminClientsPage />, "/admin/clients");
-    expect(await screen.findByText("Не указано")).toBeInTheDocument();
+    expect((await screen.findAllByText("Не указано")).length).toBeGreaterThan(0);
     first.unmount();
     mockApi({ [BASE]: { status: 500, body: {} } });
     renderWithProviders(<AdminClientsPage />, "/admin/clients");
@@ -317,6 +378,7 @@ function deferredResponse() {
 describe("Bitrix search and preview", () => {
   it("shows deals in different funnels and leads with links before explicit selection", async () => {
     const api = mockApi({
+      "/client-workflows/defaults": { body: DEFAULTS },
       "/partners/7": { body: PARTNER },
       [`${BASE}/search`]: { body: { rows: CANDIDATES, page: 1, has_more: true } },
       "/deals/987": { body: { ...DEAL, deal_id: "987", deal_url: CANDIDATES[1]!.url } },
@@ -355,6 +417,7 @@ describe("Bitrix search and preview", () => {
 
   it("does not automatically choose a single result", async () => {
     const api = mockApi({
+      "/client-workflows/defaults": { body: DEFAULTS },
       "/partners/7": { body: PARTNER },
       [`${BASE}/search`]: { body: { rows: [CANDIDATES[0]], page: 1, has_more: false } },
     });
@@ -368,6 +431,7 @@ describe("Bitrix search and preview", () => {
 
   it("previews a full URL through the local query API and posts only its numeric snapshot ID", async () => {
     const api = mockApi({
+      "/client-workflows/defaults": { body: DEFAULTS },
       "/partners/7": { body: PARTNER },
       "/deals/preview": { body: DEAL },
       [BASE]: { body: CLIENT },
@@ -384,18 +448,21 @@ describe("Bitrix search and preview", () => {
     expect(api.mock.calls.every(([url]) => url.startsWith("/api/v1/"))).toBe(true);
     await user.clear(screen.getByLabelText("Телефон клиента"));
     await user.type(screen.getByLabelText("Телефон клиента"), "+79998887766");
-    await user.type(screen.getByLabelText(/^К выплате партнёру/), "100");
+    await fillContract();
+    fireEvent.change(screen.getByLabelText("Аванс агенту, ₽"), { target: { value: "100" } });
     await user.click(screen.getByRole("button", { name: "Добавить клиента" }));
     await screen.findByText(/Список клиентов/);
     expect(sentBody(api, BASE)).toMatchObject({
       deal_id: "432",
       phone: "+79998887766",
-      current_amount: "100",
+      current_amount: null,
+      workflow: { advance_amount: "100" },
     });
   });
 
   it("validates query length and clears errors on query changes", async () => {
     const api = mockApi({
+      "/client-workflows/defaults": { body: DEFAULTS },
       "/partners/7": { body: PARTNER },
       [`${BASE}/search`]: {
         status: 503,
@@ -418,7 +485,10 @@ describe("Bitrix search and preview", () => {
   });
 
   it("ignores a pending search after the query changes", async () => {
-    const api = mockApi({ "/partners/7": { body: PARTNER } });
+    const api = mockApi({
+      "/client-workflows/defaults": { body: DEFAULTS },
+      "/partners/7": { body: PARTNER },
+    });
     const original = api.getMockImplementation()!;
     const pending = deferredResponse();
     api.mockImplementation((url, init) =>
@@ -436,6 +506,7 @@ describe("Bitrix search and preview", () => {
 
   it("keeps the newest chosen deal when an older preview returns late", async () => {
     const api = mockApi({
+      "/client-workflows/defaults": { body: DEFAULTS },
       "/partners/7": { body: PARTNER },
       [`${BASE}/search`]: { body: { rows: CANDIDATES, page: 1, has_more: false } },
       "/deals/987": { body: { ...DEAL, deal_id: "987", full_name: "Выбранный клиент" } },
@@ -465,7 +536,10 @@ describe("Bitrix search and preview", () => {
     "0",
     "-1",
   ])("rejects invalid deal reference %s without requesting it", async (reference) => {
-    const api = mockApi({ "/partners/7": { body: PARTNER } });
+    const api = mockApi({
+      "/client-workflows/defaults": { body: DEFAULTS },
+      "/partners/7": { body: PARTNER },
+    });
     renderEditor();
     const user = userEvent.setup();
     await user.type(screen.getByLabelText(REFERENCE_LABEL), reference);

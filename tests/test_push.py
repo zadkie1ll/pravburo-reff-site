@@ -6,6 +6,7 @@ from pravburo_ref_common.database import engine, session_factory
 from pravburo_ref_common.models import Agent, PushSubscription
 from sqlalchemy import delete, select
 
+from src.core.config import get_settings
 from src.core.push import send_push_notice
 from src.main import app
 from src.web.dependencies import require_agent
@@ -71,7 +72,9 @@ async def test_subscribe_then_unsubscribe() -> None:
             await session.commit()
 
 
-async def test_send_push_notice_is_a_noop_without_vapid_keys() -> None:
+async def test_send_push_notice_is_a_noop_without_vapid_keys(monkeypatch) -> None:
+    monkeypatch.setattr(get_settings(), "vapid_public_key", "")
+    monkeypatch.setattr(get_settings(), "vapid_private_key", "")
     async with session_factory() as session:
         agent = Agent(email=f"{uuid.uuid4()}@example.test")
         session.add(agent)

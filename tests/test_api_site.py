@@ -57,7 +57,12 @@ def test_spa_router_serves_index_for_migrated_paths(tmp_path) -> None:
     spa_app.include_router(router)
     spa_client = TestClient(spa_app)
 
-    concrete = [*SPA_PATHS, "/r/00000000-0000-4000-8000-000000000001"]
+    concrete = [
+        *SPA_PATHS,
+        "/r/00000000-0000-4000-8000-000000000001",
+        "/admin/partners/7/edit",
+        "/admin/clients/39/workflow",
+    ]
     for path in concrete:
         response = spa_client.get(path)
         assert response.status_code == 200
@@ -78,3 +83,12 @@ def test_spa_paths_match_the_frontend_route_list() -> None:
     frontend_paths = {_normalized(path) for path in re.findall(r'"(/[^"]*)"', source)}
 
     assert frontend_paths == {_normalized(path) for path in (*SPA_PATHS, *SPA_PATH_TEMPLATES)}
+
+    # Check actual React routes too: both inventories could omit the same new page.
+    app_source = (Path(__file__).parents[1] / "frontend" / "src" / "app" / "App.tsx").read_text()
+    actual_pages = {
+        _normalized(path)
+        for path in re.findall(r'<Route\s+path="([^"]+)"', app_source)
+        if path.startswith("/")
+    }
+    assert actual_pages == frontend_paths

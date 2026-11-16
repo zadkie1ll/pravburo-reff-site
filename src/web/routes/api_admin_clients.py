@@ -1,5 +1,6 @@
 """Explicit admin management of existing Bitrix clients; never creates CRM leads."""
 
+from datetime import date
 from decimal import Decimal
 from typing import Annotated
 
@@ -11,8 +12,15 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.services.admin_payouts import _target_date, get_overdue_days
 from src.services.bitrix_links import entity_link, parse_deal_reference
-from src.services.existing_clients import ExistingClientConflict, import_existing_client
+from src.services.client_workflow import WorkflowInput, workflow_view
+from src.services.existing_clients import (
+    ExistingClientConflict,
+    import_existing_client,
+    update_current_payout,
+    update_existing_client,
+)
 from src.services.payouts import payout_status_slug
 from src.site.crm_client import CRMClient
 from src.web.api_dependencies import ApiAdmin, CsrfProtected
@@ -30,7 +38,9 @@ class ImportRequest(BaseModel):
     full_name: str = Field(min_length=1, max_length=200)
     phone: str = Field(min_length=1, max_length=20)
     admin_note: str = Field(default="", max_length=2000)
+    workflow: WorkflowInput | None = None
     current_amount: Decimal | None = Field(default=None, gt=0, max_digits=12, decimal_places=2)
+    payout_due_date: date | None = Field(default=None, ge=date(2000, 1, 1), le=date(2200, 12, 31))
 
     @field_validator("deal_id")
     @classmethod
@@ -50,8 +60,11 @@ class ClientOut(BaseModel):
     stage_label: str
     current_amount: str | None
     current_status: str | None
+    payout_due_date: date | None
+    payout_due_date_label: str | None
     admin_note: str | None
     created_at_label: str
+    workflow: dict | None = None
 
 
 class ClientsList(BaseModel):
@@ -62,8 +75,14 @@ class ClientsList(BaseModel):
 
 
 def _row(
-    record, application, agent, reward, stage_names: dict[str, str] | None = None
+    record,
+    application,
+    agent,
+    reward,
+    stage_names: dict[str, str] | None = None,
+    overdue_days: int = 14,
 ) -> ClientOut:
+    due = _target_date(reward, overdue_days) if reward is not None else None
     return ClientOut(
         id=application.id,
         agent_id=agent.id,
@@ -78,6 +97,8 @@ def _row(
         ),
         current_amount=str(reward.amount) if reward is not None else None,
         current_status=payout_status_slug(reward) if reward is not None else None,
+        payout_due_date=due,
+        payout_due_date_label=due.strftime("%d.%m.%Y") if due else None,
         admin_note=record.admin_note,
         created_at_label=record.created_at.strftime("%d.%m.%Y %H:%M"),
     )
@@ -228,8 +249,14 @@ async def clients(
         )
     ).all()
     names = await _stage_names() if rows else {}
+    overdue_days = await get_overdue_days(session)
+    output = []
+    for row in rows:
+        item = _row(*row, stage_names=names, overdue_days=overdue_days)
+        item.workflow = await workflow_view(session, row[0])
+        output.append(item)
     return ClientsList(
-        rows=[_row(*row, stage_names=names) for row in rows],
+        rows=output,
         page=page,
         total_pages=pages,
         total_count=total,
@@ -249,6 +276,8 @@ async def import_client(admin: ApiAdmin, session: Session, body: ImportRequest):
             phone=body.phone,
             admin_note=body.admin_note,
             current_amount=body.current_amount,
+            payout_due_date=body.payout_due_date,
+            workflow=body.workflow,
         )
     except ExistingClientConflict as exc:
         raise ApiError(409, "client_conflict", str(exc)) from exc
@@ -264,4 +293,71 @@ async def import_client(admin: ApiAdmin, session: Session, body: ImportRequest):
         stage_names={
             snapshot["stage_code"]: snapshot.get("stage_label") or "Название этапа недоступно"
         },
+        overdue_days=await get_overdue_days(session),
+    )
+
+
+class UpdatePayoutRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    current_amount: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
+    payout_due_date: date = Field(ge=date(2000, 1, 1), le=date(2200, 12, 31))
+
+
+class UpdateClientRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    full_name: str = Field(min_length=1, max_length=200)
+    phone: str = Field(min_length=1, max_length=30)
+    admin_note: str = Field(default="", max_length=2000)
+
+
+@router.post("/{application_id}", response_model=ClientOut, dependencies=[CsrfProtected])
+async def edit_client(
+    admin: ApiAdmin, session: Session, application_id: int, body: UpdateClientRequest
+):
+    try:
+        record = await update_existing_client(
+            session,
+            application_id=application_id,
+            admin_id=admin.id,
+            full_name=body.full_name,
+            phone=body.phone,
+            admin_note=body.admin_note,
+        )
+    except ExistingClientConflict as exc:
+        raise ApiError(409, "client_conflict", str(exc)) from exc
+    except ValueError as exc:
+        raise ApiError(400, "invalid_client", str(exc)) from exc
+    if record is None:
+        raise ApiError(404, "not_found", "Клиент не найден")
+    row = (
+        await session.execute(_query().where(ExistingClientImport.application_id == application_id))
+    ).one()
+    return _row(
+        *row, stage_names=await _stage_names(), overdue_days=await get_overdue_days(session)
+    )
+
+
+@router.post("/{application_id}/payout", response_model=ClientOut, dependencies=[CsrfProtected])
+async def edit_payout(
+    admin: ApiAdmin, session: Session, application_id: int, body: UpdatePayoutRequest
+):
+    try:
+        record = await update_current_payout(
+            session,
+            application_id=application_id,
+            admin_id=admin.id,
+            amount=body.current_amount,
+            payout_due_date=body.payout_due_date,
+        )
+    except ExistingClientConflict as exc:
+        raise ApiError(409, "payout_conflict", str(exc)) from exc
+    except ValueError as exc:
+        raise ApiError(400, "invalid_payout", str(exc)) from exc
+    if record is None:
+        raise ApiError(404, "not_found", "Клиент не найден")
+    row = (
+        await session.execute(_query().where(ExistingClientImport.application_id == application_id))
+    ).one()
+    return _row(
+        *row, stage_names=await _stage_names(), overdue_days=await get_overdue_days(session)
     )

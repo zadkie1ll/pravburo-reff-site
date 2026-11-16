@@ -50,6 +50,7 @@ SPA_PATH_TEMPLATES = (
     "/r/{referral_code:uuid}",
     "/r/{referral_code:uuid}/success",
     "/admin/partners/{agent_id:int}/edit",
+    "/admin/clients/{application_id:int}/workflow",
 )
 
 

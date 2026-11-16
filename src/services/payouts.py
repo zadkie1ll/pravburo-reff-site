@@ -2,7 +2,13 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
 
-from pravburo_ref_common.models import ReferralApplication, Reward, RewardStatus, RewardType
+from pravburo_ref_common.models import (
+    ExistingClientImport,
+    ReferralApplication,
+    Reward,
+    RewardStatus,
+    RewardType,
+)
 from sqlalchemy import exists, extract, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,6 +18,7 @@ REWARD_TYPE_LABELS = {
     RewardType.ADVANCE: "Аванс",
     RewardType.MAIN: "Основная выплата",
     RewardType.OVERRIDE: "Бонус за сеть",
+    RewardType.CURATOR: "Выплата куратору",
     RewardType.BONUS_FULL_PAYMENT: "Бонус за 100% оплату",
     RewardType.QUARTERLY_BONUS: "Квартальный бонус",
 }
@@ -125,10 +132,14 @@ async def get_payout_rows(
         has_reward = exists().where(
             Reward.application_id == ReferralApplication.id, Reward.agent_id == agent_id
         )
+        managed_settlement = exists().where(
+            ExistingClientImport.application_id == ReferralApplication.id,
+            ExistingClientImport.workflow_data.is_not(None),
+        )
         applications = (
             await session.scalars(
                 select(ReferralApplication)
-                .where(ReferralApplication.agent_id == agent_id, ~has_reward)
+                .where(ReferralApplication.agent_id == agent_id, ~has_reward, ~managed_settlement)
                 .order_by(ReferralApplication.created_at.desc())
             )
         ).all()

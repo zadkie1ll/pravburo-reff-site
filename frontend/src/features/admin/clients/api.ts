@@ -13,8 +13,11 @@ export interface ExistingClient {
   stage_label: string;
   current_amount: string | null;
   current_status: string | null;
+  payout_due_date?: string | null;
+  payout_due_date_label?: string | null;
   admin_note: string | null;
   created_at_label: string;
+  workflow?: ClientWorkflow | null;
 }
 
 export interface ClientsList {
@@ -25,12 +28,14 @@ export interface ClientsList {
 }
 
 export interface ClientInput {
+  workflow?: WorkflowInput;
   agent_id: number;
   deal_id: string;
   full_name: string;
   phone: string;
   admin_note: string;
   current_amount: string | null;
+  payout_due_date?: string | null;
 }
 
 export interface DealSnapshot {
@@ -138,6 +143,121 @@ export function useAddClient() {
     onSuccess: () => {
       void client.invalidateQueries({ queryKey: KEY });
       void client.invalidateQueries({ queryKey: ["admin", "partners"] });
+    },
+  });
+}
+
+export function useUpdateClientPayout(id: number) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { current_amount: string; payout_due_date: string }) =>
+      apiPost<ExistingClient>(`${BASE}/${id}/payout`, body),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ["admin"] });
+    },
+  });
+}
+
+export function useUpdateClient(id: number) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { full_name: string; phone: string; admin_note: string }) =>
+      apiPost<ExistingClient>(`${BASE}/${id}`, body),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ["admin"] });
+    },
+  });
+}
+
+export interface WorkflowInput {
+  version: number;
+  contract_status?: "not_signed" | "date_unknown" | "signed";
+  contract_date: string | null;
+  first_payment: string;
+  deposit_paid_on: string | null;
+  paid_in_full: boolean;
+  advance_amount: string;
+  main_amount: string;
+  curator_amount: string;
+  advance_due_on: string | null;
+  main_due_on: string | null;
+  advance_paid_on: string | null;
+  main_paid_on: string | null;
+  curator_paid_on: string | null;
+}
+export interface WorkflowStage {
+  key: string;
+  label: string;
+  amount: string;
+  due_on: string | null;
+  paid_on: string | null;
+  status: string;
+  reward_id: number | null;
+  recipient: string | null;
+  historical: boolean;
+}
+export interface ClientWorkflow {
+  next_due_on?: string | null;
+  curator_phone?: string | null;
+  version: number;
+  input: WorkflowInput;
+  stages: WorkflowStage[];
+  status_label: string;
+  outstanding: string;
+  curator_name: string | null;
+  curator_id: number | null;
+}
+export interface WorkflowDefaults {
+  advance_amount: string;
+  main_amount: string;
+  curator_amount: string;
+  curator_id: number | null;
+  curator_name: string | null;
+  agent_phone: string | null;
+  curator_phone: string | null;
+  level: string;
+}
+const WORKFLOW = "/api/v1/site/admin/client-workflows";
+export function useWorkflowDefaults(agentId: number | null, date: string) {
+  return useQuery({
+    queryKey: ["admin", "workflow-defaults", agentId, date],
+    enabled: agentId !== null && /^\d{4}-\d{2}-\d{2}$/.test(date),
+    queryFn: ({ signal }) =>
+      apiGet<WorkflowDefaults>(
+        `${WORKFLOW}/defaults?${new URLSearchParams({ agent_id: String(agentId), contract_date: date })}`,
+        signal,
+      ),
+  });
+}
+export function useClientWorkflow(id: number) {
+  return useQuery({
+    queryKey: ["admin", "client-workflow", id],
+    queryFn: ({ signal }) =>
+      apiGet<{ id: number; agent_id: number; full_name: string; workflow: ClientWorkflow | null }>(
+        `${WORKFLOW}/${id}`,
+        signal,
+      ),
+  });
+}
+export function useSaveClientWorkflow(id: number) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (body: WorkflowInput) => apiPost<ClientWorkflow>(`${WORKFLOW}/${id}`, body),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ["admin"] });
+    },
+  });
+}
+export function usePayWorkflow(id: number) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { kind: string; version: number; paid_on: string }) =>
+      apiPost<ClientWorkflow>(`${WORKFLOW}/${id}/${body.kind}/pay`, {
+        version: body.version,
+        paid_on: body.paid_on,
+      }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: ["admin"] });
     },
   });
 }
