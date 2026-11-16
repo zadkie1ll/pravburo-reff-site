@@ -8,7 +8,8 @@ COPY frontend ./
 RUN npm run build
 
 FROM python:3.13-slim
-ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
+# Precompilation is optional and can time out on small hosts during the frontend build.
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 UV_COMPILE_BYTECODE=0 UV_LINK_MODE=copy
 WORKDIR /app
 # postgresql-client-16 (matching the pravburo-reff-postgres server version) for
 # the daily pg_dump backup job - pg_dump must not be older than the server.
