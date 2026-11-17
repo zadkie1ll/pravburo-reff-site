@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { errorMessage } from "@/shared/api/errors";
@@ -13,6 +14,7 @@ import { ApplicationCards } from "./ApplicationCards";
 
 export function AdminApplicationsPage() {
   usePageTitle("Заявки");
+  const [deletedNotice, setDeletedNotice] = useState("");
   // Filters and page live in the URL: shareable, and Back restores them.
   const [params, setParams] = useSearchParams();
   const applied = readListFilters(params);
@@ -46,6 +48,11 @@ export function AdminApplicationsPage() {
           onApply={apply}
         />
       </div>
+      {deletedNotice && (
+        <p role="status" className="notice-success">
+          {deletedNotice}
+        </p>
+      )}
       {failure && (
         <p className="alert" role="alert">
           {errorMessage(failure, "Не удалось сохранить изменение.")}
@@ -63,6 +70,7 @@ export function AdminApplicationsPage() {
         disabled={saving}
         onStatus={(id, value) => setStatus.mutate({ id, value })}
         onManager={(id, value) => setManager.mutate({ id, value })}
+        onDeleted={(name) => setDeletedNotice(`Клиент «${name}» удалён`)}
       />
       <Pagination
         page={data.page}

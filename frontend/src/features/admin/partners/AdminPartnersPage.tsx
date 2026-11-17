@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useInfoFromNavigation } from "@/features/auth/useInfoFromNavigation";
 import { AdminIcon } from "../AdminIcon";
@@ -16,6 +17,7 @@ import { PartnerCards } from "./PartnerCards";
 export function AdminPartnersPage() {
   usePageTitle("Партнёры");
   const info = useInfoFromNavigation();
+  const [deletedNotice, setDeletedNotice] = useState("");
   const [params, setParams] = useSearchParams();
   const applied = readListFilters(params);
   const { data, isPending, isError } = usePartners(applied);
@@ -43,9 +45,9 @@ export function AdminPartnersPage() {
           <AdminIcon name="add" /> Создать партнёра
         </AppLink>
       </div>
-      {info && (
+      {(info || deletedNotice) && (
         <p className="notice-success" role="status">
-          {info}
+          {deletedNotice || info}
         </p>
       )}
       <div className="admin-partners-filters">
@@ -71,6 +73,7 @@ export function AdminPartnersPage() {
         onNote={(id, note) => saveNote.mutate({ id, note })}
         onBlock={(id, reason) => block.mutate({ id, reason })}
         onUnblock={(id) => unblock.mutate(id)}
+        onDeleted={(name) => setDeletedNotice(`Партнёр «${name}» и его клиенты удалены`)}
       />
       <Pagination
         page={data.page}

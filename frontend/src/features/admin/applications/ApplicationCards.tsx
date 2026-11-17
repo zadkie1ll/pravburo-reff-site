@@ -1,3 +1,4 @@
+import { DeleteRecordButton } from "../deletions/DeleteRecordButton";
 import { SelectField } from "@/shared/ui/SelectField";
 
 import type { Application, Manager, Option, ProcessingStatus } from "./types";
@@ -9,6 +10,7 @@ interface ApplicationCardsProps {
   disabled: boolean;
   onStatus: (id: number, status: ProcessingStatus) => void;
   onManager: (id: number, managerId: number | null) => void;
+  onDeleted?: (name: string) => void;
 }
 
 export function ApplicationCards({
@@ -18,6 +20,7 @@ export function ApplicationCards({
   disabled,
   onStatus,
   onManager,
+  onDeleted,
 }: ApplicationCardsProps) {
   const managerOptions = managers.map((manager) => ({
     value: String(manager.id),
@@ -102,6 +105,13 @@ export function ApplicationCards({
               onChange={(e) => onManager(row.id, e.target.value ? Number(e.target.value) : null)}
             />
           </div>
+          <DeleteRecordButton
+            kind="clients"
+            id={row.id}
+            name={row.client_name}
+            disabled={disabled}
+            onDeleted={() => onDeleted?.(row.client_name)}
+          />
         </article>
       ))}
     </div>

@@ -1,0 +1,101 @@
+.record-delete-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 8px 14px;
+  margin-top: 12px;
+  border: 1px solid #efd4d8;
+  border-radius: 12px;
+  background: #fff8f8;
+  color: #a63945;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.record-delete-trigger svg,
+.record-delete-symbol svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.record-delete-trigger:hover {
+  background: #ffedf0;
+  border-color: #dba3ab;
+}
+.record-delete-trigger:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.record-delete-dialog {
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  box-sizing: border-box;
+  overflow-y: auto;
+  padding: 28px;
+  border: 1px solid #e4eaf1;
+  border-radius: 22px;
+  background: #fff;
+  color: var(--text);
+  box-shadow: 0 24px 80px #172c4d38;
+}
+.record-delete-dialog::backdrop {
+  background: #152b4770;
+  backdrop-filter: blur(3px);
+}
+.record-delete-dialog header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.record-delete-dialog h2 {
+  margin: 0;
+  font-size: 24px;
+}
+.record-delete-symbol {
+  display: inline-flex;
+  padding: 12px;
+  border-radius: 14px;
+  color: #ae3543;
+  background: #ffedf0;
+}
+.record-delete-name {
+  font-size: 20px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.record-delete-summary {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+  background: #f7faff;
+}
+.record-delete-summary p:first-child {
+  margin-top: 0;
+}
+.record-delete-summary dl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+.record-delete-summary dd {
+  margin: 0;
+  font-weight: 700;
+}
+.record-delete-dialog .footer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+}
+@media (max-width: 560px) {
+  .record-delete-dialog {
+    padding: 20px;
+  }
+  .record-delete-dialog .footer-actions > button {
+    width: 100%;
+  }
+}

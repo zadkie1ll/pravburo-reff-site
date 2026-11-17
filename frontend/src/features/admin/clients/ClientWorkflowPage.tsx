@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { usePageTitle } from "@/shared/hooks/usePageTitle";
 import { PageBack } from "@/shared/ui/PageBack";
 import { PageError, PageLoader } from "@/shared/ui/PageState";
@@ -10,6 +10,7 @@ import {
   usePayWorkflow,
   type ClientWorkflow,
 } from "./api";
+import { DeleteRecordButton } from "../deletions/DeleteRecordButton";
 import { WorkflowFields, readWorkflow, workflowError, rubles, dateLabel } from "./WorkflowFields";
 
 const stageStatuses: Record<string, string> = {
@@ -22,6 +23,7 @@ const stageStatuses: Record<string, string> = {
 export function ClientWorkflowPage() {
   usePageTitle("Договор и выплаты");
   const id = Number(useParams().id);
+  const navigate = useNavigate();
   const query = useClientWorkflow(id);
   const save = useSaveClientWorkflow(id);
   const pay = usePayWorkflow(id);
@@ -44,6 +46,13 @@ export function ClientWorkflowPage() {
         <p className="eyebrow">Действующий клиент</p>
         <h1>{name}</h1>
         <p>Договор и выплаты</p>
+        <DeleteRecordButton
+          kind="clients"
+          id={id}
+          name={name}
+          disabled={save.isPending || pay.isPending}
+          onDeleted={() => navigate("/admin/clients", { state: { info: "Клиент удалён" } })}
+        />
         {workflow && (
           <div className="settlement-summary">
             <strong>{workflow.status_label}</strong>

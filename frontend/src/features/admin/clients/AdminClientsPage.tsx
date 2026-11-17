@@ -18,6 +18,7 @@ import {
   type ExistingClient,
 } from "./api";
 import { BitrixLink } from "./BitrixLink";
+import { DeleteRecordButton } from "../deletions/DeleteRecordButton";
 import { PartnerSelector } from "./PartnerSelector";
 
 const money = (amount: string | null) =>
@@ -40,6 +41,7 @@ const statuses: Record<string, string> = {
 export function AdminClientsPage() {
   usePageTitle("Действующие клиенты");
   const info = useInfoFromNavigation();
+  const [deletedNotice, setDeletedNotice] = useState("");
   const [params, setParams] = useSearchParams();
   const filters: ClientFilters = {
     q: params.get("q") ?? "",
@@ -78,9 +80,9 @@ export function AdminClientsPage() {
         />
         {data && <p className="hint">Всего: {data.total_count}</p>}
       </section>
-      {info && (
+      {(info || deletedNotice) && (
         <p className="notice-success" role="status">
-          {info}
+          {deletedNotice || info}
         </p>
       )}
       {isPending ? (
@@ -174,6 +176,12 @@ export function AdminClientsPage() {
                         row={row}
                       />
                     )}
+                  <DeleteRecordButton
+                    kind="clients"
+                    id={row.id}
+                    name={row.full_name}
+                    onDeleted={() => setDeletedNotice(`Клиент «${row.full_name}» удалён`)}
+                  />
                 </article>
               ))}
             </div>

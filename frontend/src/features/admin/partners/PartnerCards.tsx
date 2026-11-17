@@ -1,4 +1,5 @@
 import { AppLink } from "@/shared/ui/AppLink";
+import { DeleteRecordButton } from "../deletions/DeleteRecordButton";
 import { AdminIcon } from "../AdminIcon";
 import { AccessActions, NoteForm } from "./PartnerActions";
 import type { Partner } from "./types";
@@ -9,6 +10,7 @@ interface PartnerCardsProps {
   onNote: (id: number, note: string) => void;
   onBlock: (id: number, reason: string) => void;
   onUnblock: (id: number) => void;
+  onDeleted?: (name: string) => void;
 }
 
 const money = (value: string) => {
@@ -23,7 +25,14 @@ const money = (value: string) => {
     : "—";
 };
 
-export function PartnerCards({ rows, disabled, onNote, onBlock, onUnblock }: PartnerCardsProps) {
+export function PartnerCards({
+  rows,
+  disabled,
+  onNote,
+  onBlock,
+  onUnblock,
+  onDeleted,
+}: PartnerCardsProps) {
   if (rows.length === 0)
     return (
       <section className="card">
@@ -134,6 +143,15 @@ export function PartnerCards({ rows, disabled, onNote, onBlock, onUnblock }: Par
                 </details>
               )}
             </div>
+            {!partner.is_admin && (
+              <DeleteRecordButton
+                kind="partners"
+                id={partner.id}
+                name={name}
+                disabled={disabled}
+                onDeleted={() => onDeleted?.(name)}
+              />
+            )}
           </article>
         );
       })}

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 const drawings: Record<string, ReactNode> = {
+  delete: <path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7" />,
   back: <path d="M20 12H4m7-7-7 7 7 7" />,
   partners: (
     <>

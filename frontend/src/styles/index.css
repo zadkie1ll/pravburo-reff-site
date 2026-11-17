@@ -17,6 +17,7 @@
 @import "./components/admin-launcher.css";
 @import "./components/admin-partners.css";
 @import "./components/admin-clients.css";
+@import "./components/admin-deletions.css";
 @import "./components/admin-applications.css";
 @import "./components/faq.css";
 @import "./components/preview.css";
