@@ -1,3 +1,4 @@
+import { ListPresentation } from "../list/ListPresentation";
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -63,15 +64,17 @@ export function AdminApplicationsPage() {
         totalPages={data.total_pages}
         searchFor={(page) => filtersToSearch({ ...applied, page })}
       />
-      <ApplicationCards
-        rows={data.rows}
-        processingStatuses={data.processing_statuses}
-        managers={data.managers}
-        disabled={saving}
-        onStatus={(id, value) => setStatus.mutate({ id, value })}
-        onManager={(id, value) => setManager.mutate({ id, value })}
-        onDeleted={(name) => setDeletedNotice(`Клиент «${name}» удалён`)}
-      />
+      <ListPresentation>
+        <ApplicationCards
+          rows={data.rows}
+          processingStatuses={data.processing_statuses}
+          managers={data.managers}
+          disabled={saving}
+          onStatus={(id, value) => setStatus.mutate({ id, value })}
+          onManager={(id, value) => setManager.mutate({ id, value })}
+          onDeleted={(name) => setDeletedNotice(`Клиент «${name}» удалён`)}
+        />
+      </ListPresentation>
       <Pagination
         page={data.page}
         totalPages={data.total_pages}

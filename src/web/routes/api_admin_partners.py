@@ -29,6 +29,7 @@ class PartnerOut(BaseModel):
     client_count: int
     # Kept as text exactly as the database sums it (the old page printed it the same way).
     total_paid: str
+    overdue_payout_count: int
     payout_details: str | None
     admin_note: str | None
 
@@ -103,6 +104,7 @@ def _row(row: PartnerRow) -> PartnerOut:
         blocked_reason=agent.blocked_reason,
         client_count=row.client_count,
         total_paid=str(row.total_paid),
+        overdue_payout_count=row.overdue_payout_count,
         payout_details=agent.payout_details,
         admin_note=agent.admin_note,
     )

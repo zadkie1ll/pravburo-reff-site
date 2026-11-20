@@ -1,3 +1,4 @@
+import { ListPresentation } from "../list/ListPresentation";
 import { useState, type FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useInfoFromNavigation } from "@/features/auth/useInfoFromNavigation";
@@ -97,94 +98,100 @@ export function AdminClientsPage() {
               <p>Действующие клиенты не найдены</p>
             </section>
           ) : (
-            <div className="partner-card-grid">
-              {data.rows.map((row) => (
-                <article
-                  key={row.id}
-                  className="partner-profile-card client-profile-card"
-                  aria-label={`Клиент: ${row.full_name}`}
-                >
-                  <h2>{row.full_name}</h2>
-                  <p>{row.phone || "Телефон не указан"}</p>
-                  <dl className="client-details">
-                    <div>
-                      <dt>Партнёр</dt>
-                      <dd>
-                        {row.agent_name || `#${row.agent_id}`}
-                        {row.agent_email && <small>{row.agent_email}</small>}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Сделка Битрикс24</dt>
-                      <dd>
-                        #{row.bitrix_deal_id} <BitrixLink url={row.bitrix_deal_url} />
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Этап сделки</dt>
-                      <dd>{row.stage_label || "Не указан"}</dd>
-                    </div>
-                    <div>
-                      <dt>{row.workflow ? "Всего к выплате по клиенту" : "К выплате партнёру"}</dt>
-                      <dd>{money(row.workflow?.outstanding ?? row.current_amount)}</dd>
-                    </div>
-                    <div>
-                      <dt>Статус текущей выплаты</dt>
-                      <dd>
-                        {row.workflow
-                          ? row.workflow.status_label
-                          : row.current_status
-                            ? (statuses[row.current_status] ?? row.current_status)
-                            : "Не указан"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>
-                        {row.workflow
-                          ? "Ближайший срок выплаты"
-                          : row.current_status === "paid"
-                            ? "Выплачено"
-                            : "Выплатить партнёру до"}
-                      </dt>
-                      <dd>
-                        {row.workflow
-                          ? row.workflow.next_due_on?.split("-").reverse().join(".") ||
-                            "Нет текущих выплат"
-                          : row.payout_due_date_label || "Не указано"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Добавлен</dt>
-                      <dd>{row.created_at_label}</dd>
-                    </div>
-                  </dl>
-                  {row.admin_note && <p className="partner-note-preview">{row.admin_note}</p>}
-                  {(row.workflow || row.current_amount === null) && (
-                    <AppLink className="button" to={`/admin/clients/${row.id}/workflow`}>
-                      Договор и выплаты →
-                    </AppLink>
-                  )}
-                  <ClientDetailsEditor
-                    key={`${row.id}-${row.full_name}-${row.phone}-${row.admin_note}`}
-                    row={row}
-                  />
-                  {!row.workflow &&
-                    row.current_status !== "paid" &&
-                    row.current_status !== "rejected" && (
-                      <ClientPayoutEditor
-                        key={`${row.id}-${row.current_amount}-${row.payout_due_date}`}
+            <ListPresentation>
+              <div className="partner-card-grid">
+                {data.rows.map((row) => (
+                  <article
+                    key={row.id}
+                    className="partner-profile-card client-profile-card"
+                    aria-label={`Клиент: ${row.full_name}`}
+                  >
+                    <h2>{row.full_name}</h2>
+                    <p>{row.phone || "Телефон не указан"}</p>
+                    <dl className="client-details">
+                      <div>
+                        <dt>Партнёр</dt>
+                        <dd>
+                          {row.agent_name || `#${row.agent_id}`}
+                          {row.agent_email && <small>{row.agent_email}</small>}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Сделка Битрикс24</dt>
+                        <dd>
+                          #{row.bitrix_deal_id} <BitrixLink url={row.bitrix_deal_url} />
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Этап сделки</dt>
+                        <dd>{row.stage_label || "Не указан"}</dd>
+                      </div>
+                      <div>
+                        <dt>
+                          {row.workflow ? "Всего к выплате по клиенту" : "К выплате партнёру"}
+                        </dt>
+                        <dd>{money(row.workflow?.outstanding ?? row.current_amount)}</dd>
+                      </div>
+                      <div>
+                        <dt>Статус текущей выплаты</dt>
+                        <dd>
+                          {row.workflow
+                            ? row.workflow.status_label
+                            : row.current_status
+                              ? (statuses[row.current_status] ?? row.current_status)
+                              : "Не указан"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>
+                          {row.workflow
+                            ? "Ближайший срок выплаты"
+                            : row.current_status === "paid"
+                              ? "Выплачено"
+                              : "Выплатить партнёру до"}
+                        </dt>
+                        <dd>
+                          {row.workflow
+                            ? row.workflow.next_due_on?.split("-").reverse().join(".") ||
+                              "Нет текущих выплат"
+                            : row.payout_due_date_label || "Не указано"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>Добавлен</dt>
+                        <dd>{row.created_at_label}</dd>
+                      </div>
+                    </dl>
+                    {row.admin_note && <p className="partner-note-preview">{row.admin_note}</p>}
+                    <div className="client-card-actions">
+                      {(row.workflow || row.current_amount === null) && (
+                        <AppLink className="button" to={`/admin/clients/${row.id}/workflow`}>
+                          Договор и выплаты →
+                        </AppLink>
+                      )}
+                      <ClientDetailsEditor
+                        key={`${row.id}-${row.full_name}-${row.phone}-${row.admin_note}`}
                         row={row}
                       />
-                    )}
-                  <DeleteRecordButton
-                    kind="clients"
-                    id={row.id}
-                    name={row.full_name}
-                    onDeleted={() => setDeletedNotice(`Клиент «${row.full_name}» удалён`)}
-                  />
-                </article>
-              ))}
-            </div>
+                      {!row.workflow &&
+                        row.current_status !== "paid" &&
+                        row.current_status !== "rejected" && (
+                          <ClientPayoutEditor
+                            key={`${row.id}-${row.current_amount}-${row.payout_due_date}`}
+                            row={row}
+                          />
+                        )}
+                      <DeleteRecordButton
+                        kind="clients"
+                        id={row.id}
+                        name={row.full_name}
+                        onDeleted={() => setDeletedNotice(`Клиент «${row.full_name}» удалён`)}
+                      />
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </ListPresentation>
           )}
           {pagination}
         </>

@@ -8,6 +8,7 @@ export interface Partner {
   blocked_reason: string | null;
   client_count: number;
   total_paid: string;
+  overdue_payout_count: number;
   payout_details: string | null;
   admin_note: string | null;
 }

@@ -157,12 +157,14 @@ async def test_changes_require_csrf(setup: Setup) -> None:
     assert (await setup.agent()).is_active is True
 
 
-async def test_list_counts_a_partners_clients_and_sums_what_was_paid(setup: Setup) -> None:
-    from datetime import UTC, datetime
+async def test_list_summarizes_paid_and_overdue_payouts(setup: Setup) -> None:
+    from datetime import UTC, datetime, timedelta
     from decimal import Decimal
 
     from pravburo_ref_common.models import ReferralApplication, Reward, RewardStatus, RewardType
 
+    now = datetime.now(UTC)
+    past = now.date() - timedelta(days=1)
     async with session_factory() as session:
         application = ReferralApplication(
             agent_id=setup.partner_id,
@@ -180,7 +182,8 @@ async def test_list_counts_a_partners_clients_and_sums_what_was_paid(setup: Setu
                     reward_type=RewardType.ADVANCE,
                     status=RewardStatus.APPROVED,
                     amount=Decimal("3000.00"),
-                    paid_at=datetime.now(UTC),
+                    payout_due_date=past,
+                    paid_at=now,
                 ),
                 # Approved but not paid yet: must not count as paid.
                 Reward(
@@ -190,6 +193,23 @@ async def test_list_counts_a_partners_clients_and_sums_what_was_paid(setup: Setu
                     reward_type=RewardType.MAIN,
                     status=RewardStatus.APPROVED,
                     amount=Decimal("10000.00"),
+                    payout_due_date=past,
+                ),
+                *(
+                    Reward(
+                        deal_id=str(uuid.uuid4()),
+                        application_id=application.id,
+                        agent_id=setup.partner_id,
+                        reward_type=RewardType.MAIN,
+                        status=status,
+                        amount=Decimal("10000.00"),
+                        payout_due_date=due,
+                    )
+                    for status, due in (
+                        (RewardStatus.APPROVED, now.date()),
+                        (RewardStatus.PENDING, past),
+                        (RewardStatus.REJECTED, past),
+                    )
                 ),
             ]
         )
@@ -209,3 +229,4 @@ async def test_list_counts_a_partners_clients_and_sums_what_was_paid(setup: Setu
     partner = next(row for row in body["rows"] if row["id"] == setup.partner_id)
     assert partner["client_count"] == 1
     assert partner["total_paid"] == "3000.00"
+    assert partner["overdue_payout_count"] == 1

@@ -28,13 +28,13 @@ export function useCalendar(query: CalendarQuery) {
 }
 
 export function useSaveOverdueDays() {
-  return useInvalidatingMutation(KEY, (days: number) =>
+  return useInvalidatingMutation(["admin"], (days: number) =>
     apiPost(`${BASE}/settings`, { overdue_days: days }),
   );
 }
 
 export function useMarkPaid() {
-  return useInvalidatingMutation(KEY, (rewardId: number) =>
+  return useInvalidatingMutation(["admin"], (rewardId: number) =>
     apiPost(`${BASE}/${rewardId}/mark-paid`),
   );
 }

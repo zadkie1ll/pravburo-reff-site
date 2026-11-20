@@ -1,9 +1,12 @@
 from dataclasses import dataclass
+from datetime import UTC, datetime, time, timedelta
 from decimal import Decimal
 
-from pravburo_ref_common.models import Agent, ReferralApplication, Reward
-from sqlalchemy import func, or_, select
+from pravburo_ref_common.models import Agent, ReferralApplication, Reward, RewardStatus
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.services.admin_payouts import get_overdue_days
 
 PAGE_SIZE = 25
 
@@ -13,6 +16,7 @@ class PartnerRow:
     agent: Agent
     client_count: int
     total_paid: Decimal
+    overdue_payout_count: int
 
 
 @dataclass(frozen=True, slots=True)
@@ -79,22 +83,43 @@ async def list_partners(
             )
         ).all()
     )
-    paid_totals = dict(
-        (
+    today = datetime.now(UTC).date()
+    overdue_days = await get_overdue_days(session)
+    # For payouts without a specific deadline, the calendar uses the UTC decision date.
+    decision_cutoff = datetime.combine(today - timedelta(days=overdue_days), time.min, UTC)
+    paid = Reward.paid_at.is_not(None)
+    overdue = and_(
+        Reward.status == RewardStatus.APPROVED,
+        Reward.paid_at.is_(None),
+        or_(
+            Reward.payout_due_date < today,
+            and_(Reward.payout_due_date.is_(None), Reward.decided_at < decision_cutoff),
+        ),
+    )
+    payout_totals = {
+        agent_id: (total_paid, overdue_count)
+        for agent_id, total_paid, overdue_count in (
             await session.execute(
-                select(Reward.agent_id, func.coalesce(func.sum(Reward.amount), 0))
-                .where(Reward.agent_id.in_(agent_ids), Reward.paid_at.is_not(None))
+                select(
+                    Reward.agent_id,
+                    func.coalesce(func.sum(Reward.amount).filter(paid), 0),
+                    func.count().filter(overdue),
+                )
+                .where(Reward.agent_id.in_(agent_ids), or_(paid, overdue))
                 .group_by(Reward.agent_id)
             )
         ).all()
-    )
+    }
 
-    rows = [
-        PartnerRow(
-            agent=agent,
-            client_count=client_counts.get(agent.id, 0),
-            total_paid=paid_totals.get(agent.id, Decimal(0)),
+    rows = []
+    for agent in agents:
+        total_paid, overdue_payout_count = payout_totals.get(agent.id, (Decimal(0), 0))
+        rows.append(
+            PartnerRow(
+                agent=agent,
+                client_count=client_counts.get(agent.id, 0),
+                total_paid=total_paid,
+                overdue_payout_count=overdue_payout_count,
+            )
         )
-        for agent in agents
-    ]
     return PartnersPage(rows=rows, page=page, total_pages=total_pages, total_count=total_count)

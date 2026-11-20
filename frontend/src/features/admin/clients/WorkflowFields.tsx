@@ -38,6 +38,55 @@ export function readWorkflow(form: HTMLFormElement, version = 0): WorkflowInput 
   };
 }
 
+// Keep the preview in sync with workday_after in src/services/client_workflow.py.
+function workdayAfter(start: string, days: number) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(start)) return "";
+  const date = new Date(`${start}T00:00:00Z`);
+  if (!Number.isFinite(date.getTime())) return "";
+  while (days > 0) {
+    date.setUTCDate(date.getUTCDate() + 1);
+    const weekday = date.getUTCDay();
+    if (weekday !== 0 && weekday !== 6) days--;
+  }
+  return date.toISOString().slice(0, 10);
+}
+
+function PayoutDeadlineField({
+  label,
+  name,
+  automatic,
+  initial,
+  lockedStage,
+}: {
+  label: string;
+  name: string;
+  automatic: string;
+  initial?: string | null;
+  lockedStage?: { due_on: string | null };
+}) {
+  const [override, setOverride] = useState<string | null>(initial ?? null);
+  return (
+    <div>
+      <Field
+        label={label}
+        name={override ? name : undefined}
+        type="date"
+        value={lockedStage ? (lockedStage.due_on ?? "") : (override ?? automatic)}
+        readOnly={Boolean(lockedStage)}
+        onChange={(event) => setOverride(event.target.value)}
+        onBlur={() => {
+          if (override === "") setOverride(null);
+        }}
+      />
+      {!lockedStage && override && automatic && (
+        <button type="button" className="nav-link" onClick={() => setOverride(null)}>
+          Вернуть автоматический срок
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function WorkflowFields({
   agentId,
   workflow,
@@ -55,6 +104,7 @@ export function WorkflowFields({
   );
   const dated = contractStatus === "signed";
   const [contractDate, setContractDate] = useState(initial?.contract_date ?? "");
+  const [depositDate, setDepositDate] = useState(initial?.deposit_paid_on ?? "");
   const keepAmounts =
     initial &&
     (initial.contract_date ||
@@ -162,7 +212,8 @@ export function WorkflowFields({
                 name="wf_deposit_paid_on"
                 type="date"
                 min={contractDate || "2000-01-01"}
-                defaultValue={initial?.deposit_paid_on ?? ""}
+                value={depositDate}
+                onChange={(event) => setDepositDate(event.target.value)}
               />
               <label className="settlement-check">
                 <input
@@ -227,12 +278,12 @@ export function WorkflowFields({
             </p>
             <div className="admin-form-grid">
               {amount("advance")}
-              <Field
+              <PayoutDeadlineField
                 label="Срок аванса — изменить вручную"
                 name="wf_advance_due_on"
-                type="date"
-                defaultValue={initial?.advance_due_on ?? ""}
-                readOnly={locked("advance")}
+                automatic={workdayAfter(contractDate, 5)}
+                initial={initial?.advance_due_on}
+                lockedStage={locked("advance") ? stage("advance") : undefined}
               />
             </div>
             <details className="settlement-history">
@@ -248,12 +299,12 @@ export function WorkflowFields({
             </p>
             <div className="admin-form-grid">
               {amount("main")}
-              <Field
+              <PayoutDeadlineField
                 label="Срок основной выплаты — изменить вручную"
                 name="wf_main_due_on"
-                type="date"
-                defaultValue={initial?.main_due_on ?? ""}
-                readOnly={locked("main")}
+                automatic={workdayAfter(depositDate, 15)}
+                initial={initial?.main_due_on}
+                lockedStage={locked("main") ? stage("main") : undefined}
               />
             </div>
             <details className="settlement-history">

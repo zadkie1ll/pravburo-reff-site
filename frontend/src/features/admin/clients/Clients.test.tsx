@@ -124,6 +124,18 @@ describe("existing client import", () => {
     expect(screen.getByLabelText("ФИО клиента")).toHaveValue(CLIENT.full_name);
     expect(screen.getByLabelText("Телефон клиента")).toHaveValue(CLIENT.phone);
     await fillContract();
+    fireEvent.change(screen.getByLabelText("Дата договора"), { target: { value: "2026-06-08" } });
+    expect(screen.getByLabelText("Срок аванса — изменить вручную")).toHaveValue("2026-06-15");
+    const deposit = screen.getByLabelText("Депозит оплачен — дата");
+    const mainDeadline = screen.getByLabelText("Срок основной выплаты — изменить вручную");
+    expect(mainDeadline).toHaveValue("");
+    fireEvent.change(deposit, { target: { value: "2026-06-12" } });
+    expect(mainDeadline).toHaveValue("2026-07-03");
+    fireEvent.change(mainDeadline, { target: { value: "2026-07-10" } });
+    fireEvent.change(deposit, { target: { value: "2026-06-15" } });
+    expect(mainDeadline).toHaveValue("2026-07-10");
+    await user.click(screen.getByRole("button", { name: "Вернуть автоматический срок" }));
+    expect(mainDeadline).toHaveValue("2026-07-06");
     await user.clear(screen.getByLabelText("ФИО клиента"));
     await user.type(screen.getByLabelText("ФИО клиента"), "Иван Исправленный");
     await user.type(screen.getByLabelText("Заметка"), "Проверено");
@@ -139,7 +151,10 @@ describe("existing client import", () => {
       current_amount: null,
       admin_note: "Проверено",
       workflow: {
-        contract_date: "2026-10-10",
+        contract_date: "2026-06-08",
+        deposit_paid_on: "2026-06-15",
+        advance_due_on: null,
+        main_due_on: null,
         first_payment: "75000.00",
         advance_amount: "3000",
         main_amount: "10000",

@@ -1,0 +1,151 @@
+.list-view-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin: 20px 0 16px;
+}
+.list-view-toggle {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #f2f6fb;
+}
+.list-view-toggle[hidden] {
+  display: none;
+}
+.list-view-toggle button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 14px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.list-view-toggle button[aria-pressed="true"] {
+  border-color: #d7e7fb;
+  background: #fff;
+  color: #2472bd;
+  box-shadow: 0 2px 6px #2447650a;
+}
+.list-view-toggle button:hover {
+  color: #2472bd;
+}
+.list-view-toggle button:focus-visible {
+  outline: 3px solid #80baff;
+  outline-offset: 2px;
+}
+
+.admin-list-presentation > .partner-card-grid {
+  margin-top: 0;
+}
+.admin-list-presentation[data-view="rows"] > .partner-card-grid {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+.admin-list-presentation[data-view="rows"] .partner-profile-card {
+  border-radius: 14px;
+  padding: 16px 20px;
+  overflow-wrap: anywhere;
+}
+.admin-list-presentation[data-view="rows"] .partner-profile-card:not(.client-profile-card) {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: 12px 18px;
+}
+.admin-list-presentation[data-view="rows"]
+  :is(
+    .partner-contact-list,
+    .application-phone,
+    .partner-card-metrics,
+    .application-partner,
+    .application-delivery
+  ) {
+  margin: 0;
+}
+.admin-list-presentation[data-view="rows"] .partner-card-metrics {
+  padding: 8px 10px;
+  gap: 8px;
+}
+.admin-list-presentation[data-view="rows"] .partner-card-metrics dd {
+  font-size: 15px;
+}
+.admin-list-presentation[data-view="rows"]
+  :is(
+    .partner-note-preview,
+    .partner-blocked-reason,
+    .partner-card-tools,
+    .application-controls,
+    .application-delivery
+  ) {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.admin-list-presentation[data-view="rows"] :is(.partner-card-tools, .application-controls) {
+  padding-top: 12px;
+}
+.admin-list-presentation[data-view="rows"] .client-profile-card > h2 {
+  margin: 0;
+  font-size: 17px;
+}
+.admin-list-presentation[data-view="rows"] .client-profile-card > p {
+  margin: 6px 0 12px;
+}
+.admin-list-presentation[data-view="rows"] .client-details {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px 18px;
+  padding: 10px 0;
+  margin: 0 0 12px;
+  border-block: 1px solid var(--line);
+}
+@media (max-width: 850px) {
+  .admin-list-presentation[data-view="rows"] .partner-profile-card:not(.client-profile-card),
+  .admin-list-presentation[data-view="rows"] .client-details {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 480px) {
+  .admin-list-presentation[data-view="rows"] .partner-profile-card:not(.client-profile-card) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .admin-list-presentation[data-view="rows"] .partner-profile-card {
+    padding: 14px;
+  }
+}
+
+@media (min-width: 851px) {
+  .admin-list-presentation[data-view="rows"]
+    .partner-profile-card:not(.application-card, .client-profile-card)
+    > :is(
+      .partner-card-header,
+      .partner-contact-list,
+      .partner-card-metrics,
+      .partner-bank-details
+    ) {
+    grid-row: 1;
+  }
+}
+.admin-list-presentation[data-view="rows"] .client-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+}
+.admin-list-presentation[data-view="rows"]
+  .client-card-actions
+  > :is(.client-payout-editor, .record-delete-trigger) {
+  margin-top: 0;
+}
+.admin-list-presentation[data-view="rows"] .client-card-actions > .client-payout-editor:has(form) {
+  flex-basis: 100%;
+  min-width: 0;
+}

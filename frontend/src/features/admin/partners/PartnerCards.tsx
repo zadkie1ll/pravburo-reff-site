@@ -44,6 +44,7 @@ export function PartnerCards({
     <div className="partner-card-grid">
       {rows.map((partner) => {
         const name = partner.display_name || "Без имени";
+        const overdueCount = partner.overdue_payout_count;
         const initials =
           partner.display_name
             .trim()
@@ -55,7 +56,7 @@ export function PartnerCards({
         return (
           <article
             key={partner.id}
-            className="partner-profile-card"
+            className={`partner-profile-card${overdueCount > 0 ? " has-overdue-payout" : ""}`}
             aria-label={`Партнёр: ${name}`}
           >
             <header className="partner-card-header">
@@ -68,6 +69,13 @@ export function PartnerCards({
                   #{partner.id}
                   {partner.is_admin ? " · Администратор" : ""}
                 </small>
+                {overdueCount > 0 && (
+                  <span className="partner-overdue-badge">
+                    {overdueCount === 1
+                      ? "Просрочена выплата"
+                      : `Просроченные выплаты: ${overdueCount}`}
+                  </span>
+                )}
               </div>
               <span
                 className={`partner-access-badge ${partner.is_active ? "is-active" : "is-blocked"}`}

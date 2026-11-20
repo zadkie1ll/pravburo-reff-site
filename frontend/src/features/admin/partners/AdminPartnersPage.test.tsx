@@ -18,6 +18,7 @@ const PARTNER: Partner = {
   blocked_reason: null,
   client_count: 3,
   total_paid: "9000.00",
+  overdue_payout_count: 0,
   payout_details: "Карта 1234",
   admin_note: "звонить после 18",
 };
@@ -42,12 +43,13 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe("AdminPartnersPage", () => {
   it("lists partners with their figures", async () => {
-    mockApi({ [PATH]: list([PARTNER]) });
+    mockApi({ [PATH]: list([{ ...PARTNER, overdue_payout_count: 1 }]) });
     renderWithProviders(<AdminPartnersPage />, PATH);
 
     expect(await screen.findByText("Ольга Партнёрова")).toBeInTheDocument();
     expect(screen.getByText("olga@example.com", { exact: false })).toBeInTheDocument();
     expect(screen.getByText("Активен")).toBeInTheDocument();
+    expect(screen.getByText("Просрочена выплата")).toBeInTheDocument();
     expect(screen.getByText(/9\s*000\s*₽/)).toBeInTheDocument();
     expect(screen.getByText("Карта 1234")).toBeInTheDocument();
     expect(screen.getByText("Всего: 1")).toBeInTheDocument();
@@ -72,6 +74,7 @@ describe("AdminPartnersPage", () => {
     renderWithProviders(<AdminPartnersPage />, PATH);
 
     expect(await screen.findByText("Без имени")).toBeInTheDocument();
+    expect(screen.queryByText("Просрочена выплата")).not.toBeInTheDocument();
   });
 
   it("searches and filters through the URL", async () => {

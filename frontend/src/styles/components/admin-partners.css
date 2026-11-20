@@ -25,6 +25,22 @@
   background: #fff;
   box-shadow: 0 8px 24px rgba(36, 71, 101, 0.04);
 }
+.partner-profile-card.has-overdue-payout {
+  border-color: #edbfc5;
+  background: #fffafb;
+}
+.partner-overdue-badge {
+  display: block;
+  width: fit-content;
+  margin-top: 6px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: #ffedef;
+  color: #a63945;
+  font-size: 12px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
 .partner-card-header {
   display: flex;
   align-items: center;

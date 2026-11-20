@@ -1,3 +1,4 @@
+import { ListPresentation } from "../list/ListPresentation";
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useInfoFromNavigation } from "@/features/auth/useInfoFromNavigation";
@@ -67,14 +68,16 @@ export function AdminPartnersPage() {
           {errorMessage(failure, "Не удалось сохранить изменение.")}
         </p>
       )}
-      <PartnerCards
-        rows={data.rows}
-        disabled={saving}
-        onNote={(id, note) => saveNote.mutate({ id, note })}
-        onBlock={(id, reason) => block.mutate({ id, reason })}
-        onUnblock={(id) => unblock.mutate(id)}
-        onDeleted={(name) => setDeletedNotice(`Партнёр «${name}» и его клиенты удалены`)}
-      />
+      <ListPresentation>
+        <PartnerCards
+          rows={data.rows}
+          disabled={saving}
+          onNote={(id, note) => saveNote.mutate({ id, note })}
+          onBlock={(id, reason) => block.mutate({ id, reason })}
+          onUnblock={(id) => unblock.mutate(id)}
+          onDeleted={(name) => setDeletedNotice(`Партнёр «${name}» и его клиенты удалены`)}
+        />
+      </ListPresentation>
       <Pagination
         page={data.page}
         totalPages={data.total_pages}
